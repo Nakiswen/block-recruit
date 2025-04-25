@@ -5,7 +5,7 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["ui", "resume-parser", "web3-utils", "web3-rag"],
   images: {
-    domains: ['images.unsplash.com'],
+    domains: ['images.unsplash.com', 'app.uniswap.org'],
   },
   // 确保服务器端可以访问环境变量
   serverRuntimeConfig: {

@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+### project rules
+- 始终遵循项目的设计模式
+- 使用项目现有的错误处理机制
+- 只使用项目已导入的外部库
+- 遵循项目的命名规范

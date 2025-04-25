@@ -13,5 +13,11 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@headlessui/react": "^1.7.18",
+    "bufferutil": "^4.0.9",
+    "next": "^13.4.1",
+    "utf-8-validate": "^6.0.5"
   }
-} 
+}
