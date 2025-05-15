@@ -17,7 +17,6 @@
     "pdfjs-dist": "^3.11.174",
     "mammoth": "^1.6.0",
     "mastra": "^0.4.9",
-    "openai": "^4.29.0",
-    "web3-rag": "workspace:*"
+    "openai": "^4.29.0"
   }
 } 

@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const webpack = require('webpack');
+const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
@@ -10,10 +11,18 @@ const nextConfig = {
   // 确保服务器端可以访问环境变量
   serverRuntimeConfig: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
   },
   env: {
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    NEXT_PUBLIC_OPENAI_API_KEY: process.env.NEXT_PUBLIC_OPENAI_API_KEY
+    NEXT_PUBLIC_OPENAI_API_KEY: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    UPSTASH_VECTOR_REST_URL: process.env.UPSTASH_VECTOR_REST_URL,
+    UPSTASH_VECTOR_REST_TOKEN: process.env.UPSTASH_VECTOR_REST_TOKEN,
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    DATABASE_URL: process.env.DATABASE_URL,
   },
   // 添加webpack配置以处理Node.js模块
   webpack: (config, { isServer }) => {
@@ -41,6 +50,9 @@ const nextConfig = {
     );
 
     config.resolve.alias.canvas = false;
+    
+    // 设置 @ 别名指向项目根目录
+    config.resolve.alias['@'] = path.resolve(__dirname, '../../');
 
     return config;
   },

@@ -121,6 +121,9 @@ export default function Home() {
             <p className="mt-3 text-base text-gray-500 text-center">
               智能分析简历与Web3职位要求的匹配度，量化评估候选人的区块链技能与项目经验
             </p>
+            <Link href="/resume-screening" className="mt-4 text-indigo-600 hover:text-indigo-800 font-medium">
+              立即体验 →
+            </Link>
           </div>
 
           <div className="flex flex-col items-center p-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -133,6 +136,9 @@ export default function Home() {
             <p className="mt-3 text-base text-gray-500 text-center">
               根据职位要求生成针对性的Web3技术问题，评估候选人的思维方式和问题解决能力
             </p>
+            <Link href="/interview" className="mt-4 text-purple-600 hover:text-purple-800 font-medium">
+              立即体验 →
+            </Link>
           </div>
 
           <div className="flex flex-col items-center p-6 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -164,18 +170,18 @@ export default function Home() {
               <span className="absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
                 1
               </span>
-              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">上传简历</h3>
+              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">创建Web3岗位</h3>
               <p className="mb-4 text-base text-gray-600">
-                上传候选人的简历，支持PDF、Word等格式，系统将自动解析简历内容
+                创建区块链相关岗位并设置技能要求，自定义各能力维度的权重
               </p>
             </li>
             <li className="mb-10 ml-6">
               <span className="absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white bg-gradient-to-r from-purple-500 to-pink-500 text-white">
                 2
               </span>
-              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">选择职位要求</h3>
+              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">上传候选人简历</h3>
               <p className="mb-4 text-base text-gray-600">
-                选择目标Web3职位和具体要求，或自定义职位技能需求
+                上传候选人简历，系统支持多种格式，自动解析内容并提取关键信息
               </p>
             </li>
             <li className="mb-10 ml-6">
@@ -191,7 +197,7 @@ export default function Home() {
               <span className="absolute flex items-center justify-center w-8 h-8 rounded-full -left-4 ring-4 ring-white bg-gradient-to-r from-green-500 to-teal-500 text-white">
                 4
               </span>
-              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">开始智能面试</h3>
+              <h3 className="flex items-center mb-1 text-lg font-semibold text-gray-900">进入面试环节</h3>
               <p className="mb-4 text-base text-gray-600">
                 对筛选通过的候选人进行智能面试，测试其Web3知识深度和问题解决能力
               </p>

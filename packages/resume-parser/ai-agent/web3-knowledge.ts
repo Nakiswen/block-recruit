@@ -1,15 +1,93 @@
-import { Web3KnowledgeManager } from 'web3-rag';
+// 移除 web3-rag 导入并创建本地 KnowledgeManager 类
+// import { Web3KnowledgeManager } from 'web3-rag';
+
+/**
+ * 简单的知识库管理器接口
+ */
+class KnowledgeManager {
+  private knowledgeBase: any = null;
+
+  /**
+   * 创建知识库
+   */
+  createKnowledgeBase(name: string): any {
+    return {
+      name,
+      skills: [],
+      version: '1.0',
+      lastUpdated: new Date().toISOString()
+    };
+  }
+
+  /**
+   * 加载知识库
+   */
+  loadKnowledgeBase(knowledgeBase: any): void {
+    this.knowledgeBase = knowledgeBase;
+  }
+
+  /**
+   * 获取知识上下文
+   */
+  async getKnowledgeContext(query: string, limit: number = 3): Promise<string> {
+    // 简单实现，实际应用中可以通过API调用web3-rag服务
+    return `Web3相关知识: ${query}\n\n这里应该包含从知识库中检索的内容。`;
+  }
+  
+  /**
+   * 从文本中提取技能
+   * 简单实现，返回硬编码的Web3技能列表
+   */
+  async extractSkillsFromText(text: string): Promise<string[]> {
+    const web3Keywords = [
+      'blockchain', 'ethereum', 'bitcoin', 'solidity', 'smart contract',
+      'web3', 'defi', 'nft', 'dao', 'token', 'crypto', 'cryptocurrency'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    return web3Keywords.filter(keyword => lowerText.includes(keyword));
+  }
+  
+  /**
+   * 获取技能知识
+   */
+  getSkillKnowledge(skillName: string): any {
+    // 简单实现，返回基本技能信息
+    const web3Skills: Record<string, any> = {
+      'blockchain': {
+        name: 'Blockchain',
+        description: '区块链是一种分布式账本技术',
+        category: 'core',
+        relatedSkills: ['cryptocurrency', 'smart contracts']
+      },
+      'ethereum': {
+        name: 'Ethereum',
+        description: '以太坊是一个开源的区块链平台',
+        category: 'platform',
+        relatedSkills: ['solidity', 'smart contracts', 'web3.js']
+      },
+      'solidity': {
+        name: 'Solidity',
+        description: 'Solidity是以太坊智能合约的编程语言',
+        category: 'language',
+        relatedSkills: ['ethereum', 'smart contracts']
+      }
+    };
+    
+    return web3Skills[skillName.toLowerCase()] || null;
+  }
+}
 
 // 全局单例知识库管理器
-let knowledgeManagerInstance: Web3KnowledgeManager | null = null;
+let knowledgeManagerInstance: KnowledgeManager | null = null;
 
 /**
  * 初始化并获取Web3知识库管理器实例
  */
-export function getWeb3KnowledgeManager(): Web3KnowledgeManager {
+export function getWeb3KnowledgeManager(): KnowledgeManager {
   if (!knowledgeManagerInstance) {
     // 创建知识库管理器实例
-    knowledgeManagerInstance = new Web3KnowledgeManager();
+    knowledgeManagerInstance = new KnowledgeManager();
   }
   return knowledgeManagerInstance;
 }

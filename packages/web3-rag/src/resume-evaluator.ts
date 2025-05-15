@@ -1,31 +1,5 @@
 import { Web3KnowledgeManager } from './knowledge-manager';
-import { SkillMatch, EvaluationResult, JobRequirement, LearningResource, Web3KnowledgeBase } from './types';
-
-// 定义ResumeData接口
-interface ResumeData {
-  skills?: string[];
-  workExperience: Array<{
-    company?: string;
-    position?: string;
-    startDate?: string;
-    endDate?: string;
-    technologies?: string[];
-    description?: string;
-  }>;
-  projects: Array<{
-    name?: string;
-    role?: string;
-    technologies?: string[];
-    description?: string;
-  }>;
-  education: Array<{
-    school?: string;
-    degree?: string;
-    major?: string;
-    startDate?: string;
-    endDate?: string;
-  }>;
-}
+import { SkillMatch, EvaluationResult, JobRequirement, LearningResource, Web3KnowledgeBase, ResumeData } from './types';
 
 /**
  * Web3简历评估器类
@@ -59,8 +33,8 @@ export class Web3ResumeEvaluator {
     const extractedSkills = await this.knowledgeManager.extractSkillsFromText(
       [
         ...(resumeData.skills || []),
-        ...resumeData.workExperience.map((exp: any) => exp.description || ''),
-        ...resumeData.projects.map((proj: any) => proj.description || '')
+        ...(resumeData.workExperience || []).map((exp: any) => exp.description || ''),
+        ...(resumeData.projects || []).map((proj: any) => proj.description || '')
       ].join(' ')
     );
     

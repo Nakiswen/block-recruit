@@ -15,9 +15,9 @@ BlockRecruit是一个革命性的去中心化招聘协议，将先进的人工�
 - 前端: Next.js, TailwindCSS, Headless UI
 - Web3集成: ethers.js, WalletConnect
 - 状态管理: Jotai
-- 后端: Node.js, Koa, GraphQL
-- 数据库: MongoDB, Redis
-- AI集成: OpenAI API/Claude API
+- 后端: Node.js, Koa
+- 数据库: Supabase, Redis
+- AI集成: openrouter
 
 ## 开发
 

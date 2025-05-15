@@ -63,7 +63,10 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
   jobRequirements,
 }) => {
   // 显示分数的函数
-  const renderScore = (score: number) => {
+  const renderScore = (score?: number) => {
+    if (score === undefined || score === null) {
+      return <span className="text-2xl font-bold text-gray-600">N/A</span>;
+    }
     const color = score >= 8 ? 'text-green-600' :
                   score >= 6 ? 'text-yellow-600' : 'text-red-600';
     return <span className={`text-2xl font-bold ${color}`}>{score.toFixed(1)}/10</span>;
@@ -151,36 +154,36 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                 <span className="text-sm text-gray-600">技能匹配度</span>
                 <div className="flex items-center">
                   <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${result.skillsScore * 10}%` }}></div>
+                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(result.skillsScore || 0) * 10}%` }}></div>
                   </div>
-                  <span className="text-sm font-medium">{result.skillsScore.toFixed(1)}</span>
+                  <span className="text-sm font-medium">{result.skillsScore !== undefined ? result.skillsScore.toFixed(1) : 'N/A'}</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">经验匹配度</span>
                 <div className="flex items-center">
                   <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${result.experienceScore * 10}%` }}></div>
+                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(result.experienceScore || 0) * 10}%` }}></div>
                   </div>
-                  <span className="text-sm font-medium">{result.experienceScore.toFixed(1)}</span>
+                  <span className="text-sm font-medium">{result.experienceScore !== undefined ? result.experienceScore.toFixed(1) : 'N/A'}</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">教育背景</span>
                 <div className="flex items-center">
                   <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${result.educationScore * 10}%` }}></div>
+                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(result.educationScore || 0) * 10}%` }}></div>
                   </div>
-                  <span className="text-sm font-medium">{result.educationScore.toFixed(1)}</span>
+                  <span className="text-sm font-medium">{result.educationScore !== undefined ? result.educationScore.toFixed(1) : 'N/A'}</span>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">项目经验</span>
                 <div className="flex items-center">
                   <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${result.projectsScore * 10}%` }}></div>
+                    <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(result.projectsScore || 0) * 10}%` }}></div>
                   </div>
-                  <span className="text-sm font-medium">{result.projectsScore.toFixed(1)}</span>
+                  <span className="text-sm font-medium">{result.projectsScore !== undefined ? result.projectsScore.toFixed(1) : 'N/A'}</span>
                 </div>
               </div>
             </div>
@@ -191,7 +194,7 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card title="匹配技能" subtitle="与职位需求相关的技能">
           <ul className="divide-y divide-gray-200">
-            {result.matchingSkills.map((skill, index) => (
+            {result.matchingSkills?.map((skill, index) => (
               <li key={index} className="py-3 flex justify-between">
                 <div>
                   <span className="font-medium">{skill.skill}</span>
@@ -204,25 +207,28 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                         skill.relevance >= 8 ? 'bg-green-500' : 
                         skill.relevance >= 5 ? 'bg-yellow-500' : 'bg-red-500'
                       }`} 
-                      style={{ width: `${skill.relevance * 10}%` }}
+                      style={{ width: `${(skill.relevance || 0) * 10}%` }}
                     ></div>
                   </div>
-                  <span className="text-xs text-gray-500">{skill.relevance}/10</span>
+                  <span className="text-xs text-gray-500">{skill.relevance !== undefined ? skill.relevance : 'N/A'}/10</span>
                 </div>
               </li>
             ))}
+            {(!result.matchingSkills || result.matchingSkills.length === 0) && (
+              <li className="py-3 text-sm text-gray-500">暂无匹配技能</li>
+            )}
           </ul>
         </Card>
 
         <Card title="相关经验" subtitle="与职位相关的工作经历">
           <ul className="divide-y divide-gray-200">
-            {result.relevantExperience.map((exp, index) => (
+            {result.relevantExperience?.map((exp, index) => (
               <li key={index} className="py-3">
                 <div className="flex justify-between mb-1">
                   <span className="font-medium">{exp.position}</span>
                   <span className="text-sm text-gray-500">
-                    {Math.floor(exp.duration / 12) > 0 ? `${Math.floor(exp.duration / 12)}年` : ''}
-                    {exp.duration % 12 > 0 ? `${exp.duration % 12}个月` : ''}
+                    {Math.floor((exp.duration || 0) / 12) > 0 ? `${Math.floor((exp.duration || 0) / 12)}年` : ''}
+                    {(exp.duration || 0) % 12 > 0 ? `${(exp.duration || 0) % 12}个月` : ''}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -234,14 +240,17 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                           exp.relevance >= 8 ? 'bg-green-500' : 
                           exp.relevance >= 5 ? 'bg-yellow-500' : 'bg-red-500'
                         }`} 
-                        style={{ width: `${exp.relevance * 10}%` }}
+                        style={{ width: `${(exp.relevance || 0) * 10}%` }}
                       ></div>
                     </div>
-                    <span className="text-xs text-gray-500">{exp.relevance}/10</span>
+                    <span className="text-xs text-gray-500">{exp.relevance !== undefined ? exp.relevance : 'N/A'}/10</span>
                   </div>
                 </div>
               </li>
             ))}
+            {(!result.relevantExperience || result.relevantExperience.length === 0) && (
+              <li className="py-3 text-sm text-gray-500">暂无相关经验</li>
+            )}
           </ul>
         </Card>
       </div>
@@ -249,25 +258,34 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card title="优势">
           <ul className="list-disc list-inside text-gray-700 space-y-2">
-            {result.strengths.map((strength, index) => (
+            {result.strengths?.map((strength, index) => (
               <li key={index} className="text-sm">{strength}</li>
             ))}
+            {(!result.strengths || result.strengths.length === 0) && (
+              <li className="text-sm text-gray-500">暂无明显优势</li>
+            )}
           </ul>
         </Card>
 
         <Card title="不足">
           <ul className="list-disc list-inside text-gray-700 space-y-2">
-            {result.weaknesses.map((weakness, index) => (
+            {result.weaknesses?.map((weakness, index) => (
               <li key={index} className="text-sm">{weakness}</li>
             ))}
+            {(!result.weaknesses || result.weaknesses.length === 0) && (
+              <li className="text-sm text-gray-500">暂无明显不足</li>
+            )}
           </ul>
         </Card>
 
         <Card title="建议">
           <ul className="list-disc list-inside text-gray-700 space-y-2">
-            {result.recommendations.map((recommendation, index) => (
+            {result.recommendations?.map((recommendation, index) => (
               <li key={index} className="text-sm">{recommendation}</li>
             ))}
+            {(!result.recommendations || result.recommendations.length === 0) && (
+              <li className="text-sm text-gray-500">暂无具体建议</li>
+            )}
           </ul>
         </Card>
       </div>
@@ -281,7 +299,7 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
               <div>
                 <h4 className="font-medium text-gray-700 mb-3">技能匹配</h4>
                 <ul className="divide-y divide-gray-200">
-                  {result.web3Evaluation.skillMatches.slice(0, 5).map((skill, index) => (
+                  {result.web3Evaluation?.skillMatches?.slice(0, 5).map((skill, index) => (
                     <li key={index} className="py-3">
                       <div className="flex justify-between mb-1">
                         <div className="font-medium flex items-center">
@@ -298,10 +316,10 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                                 skill.relevance >= 8 ? 'bg-green-500' : 
                                 skill.relevance >= 5 ? 'bg-yellow-500' : 'bg-red-500'
                               }`} 
-                              style={{ width: `${skill.relevance * 10}%` }}
+                              style={{ width: `${(skill.relevance || 0) * 10}%` }}
                             ></div>
                           </div>
-                          <span className="text-xs text-gray-500">{skill.relevance.toFixed(1)}</span>
+                          <span className="text-xs text-gray-500">{skill.relevance !== undefined ? skill.relevance.toFixed(1) : 'N/A'}</span>
                         </div>
                       </div>
                       {skill.description && (
@@ -309,8 +327,11 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                       )}
                     </li>
                   ))}
+                  {(!result.web3Evaluation?.skillMatches || result.web3Evaluation.skillMatches.length === 0) && (
+                    <li className="py-3 text-sm text-gray-500">暂无匹配的Web3技能</li>
+                  )}
                 </ul>
-                {result.web3Evaluation.skillMatches.length > 5 && (
+                {result.web3Evaluation?.skillMatches && result.web3Evaluation.skillMatches.length > 5 && (
                   <div className="text-right mt-2">
                     <span className="text-xs text-gray-500">
                       还有 {result.web3Evaluation.skillMatches.length - 5} 项技能未显示
@@ -322,7 +343,7 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
               {/* 缺失技能 */}
               <div>
                 <h4 className="font-medium text-gray-700 mb-3">缺失的关键技能</h4>
-                {result.web3Evaluation.missingSkills.length > 0 ? (
+                {result.web3Evaluation?.missingSkills?.length > 0 ? (
                   <ul className="list-disc list-inside text-gray-700 space-y-2">
                     {result.web3Evaluation.missingSkills.map((skill, index) => (
                       <li key={index} className="text-sm">{skill}</li>
@@ -336,6 +357,9 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                   {result.web3Evaluation.strengthAreas.map((area, index) => (
                     <li key={index} className="text-sm">{area}</li>
                   ))}
+                  {(!result.web3Evaluation?.strengthAreas || result.web3Evaluation.strengthAreas.length === 0) && (
+                    <li className="text-sm text-gray-500">暂无明显优势领域</li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -348,17 +372,23 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                 <div>
                   <h4 className="font-medium text-gray-700 mb-2">需要提升的领域</h4>
                   <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    {result.web3Evaluation.improvementAreas.map((area, index) => (
+                    {result.web3Evaluation?.improvementAreas?.map((area, index) => (
                       <li key={index} className="text-sm">{area}</li>
                     ))}
+                    {(!result.web3Evaluation?.improvementAreas || result.web3Evaluation.improvementAreas.length === 0) && (
+                      <li className="text-sm text-gray-500">暂无需要提升的领域</li>
+                    )}
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-700 mb-2">职业发展方向</h4>
                   <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    {result.web3Evaluation.careerSuggestions.map((suggestion, index) => (
+                    {result.web3Evaluation?.careerSuggestions?.map((suggestion, index) => (
                       <li key={index} className="text-sm">{suggestion}</li>
                     ))}
+                    {(!result.web3Evaluation?.careerSuggestions || result.web3Evaluation.careerSuggestions.length === 0) && (
+                      <li className="text-sm text-gray-500">暂无职业发展建议</li>
+                    )}
                   </ul>
                 </div>
               </div>
@@ -366,13 +396,13 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
 
             {/* 学习资源推荐 */}
             <Card title="学习资源推荐" subtitle="针对性的Web3学习资源">
-              {result.web3Evaluation.learningResources.length > 0 ? (
+              {result.web3Evaluation?.learningResources && result.web3Evaluation.learningResources.length > 0 ? (
                 <div className="space-y-4">
                   {result.web3Evaluation.learningResources.slice(0, 2).map((item, index) => (
                     <div key={index}>
                       <h4 className="font-medium text-gray-700 mb-2">{item.skill}</h4>
                       <ul className="space-y-2">
-                        {item.resources.map((resource, resIndex) => (
+                        {item.resources?.map((resource, resIndex) => (
                           <li key={resIndex} className="text-sm">
                             <a 
                               href={resource.url} 
@@ -385,6 +415,9 @@ const ResumeEvaluationResult: React.FC<ResumeEvaluationResultProps> = ({
                             </a>
                           </li>
                         ))}
+                        {(!item.resources || item.resources.length === 0) && (
+                          <li className="text-sm text-gray-500">暂无相关资源</li>
+                        )}
                       </ul>
                     </div>
                   ))}

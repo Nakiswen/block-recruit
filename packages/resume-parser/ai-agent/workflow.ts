@@ -1,4 +1,5 @@
 import { ResumeData } from '../types';
+import { extractJsonFromResponse } from './utils';
 
 // Agent接口定义
 export interface Agent {
@@ -317,7 +318,7 @@ export async function runWorkflow(
       email: (results.personal && results.personal.email) || "",
       phone: (results.personal && results.personal.phone) || "",
       location: (results.personal && results.personal.location) || "",
-      links: (results.personal && results.personal.links) 
+      links: (results.personal && results.personal.links && Array.isArray(results.personal.links)) 
         ? results.personal.links.map(link => ({
             label: "Link",
             url: link
@@ -325,56 +326,41 @@ export async function runWorkflow(
         : []
     },
     summary: "",
-    skills: results.skills || [],
-    workExperience: (results.workExperience && results.workExperience.length > 0)
+    skills: Array.isArray(results.skills) ? results.skills : [],
+    workExperience: Array.isArray(results.workExperience)
       ? results.workExperience.map(exp => ({
-          company: exp.company || "",
-          position: exp.position || "",
-          startDate: exp.startDate || "",
-          endDate: exp.endDate || "",
-          description: exp.description || "",
+          company: exp?.company || "",
+          position: exp?.position || "",
+          startDate: exp?.startDate || "",
+          endDate: exp?.endDate || "",
+          description: exp?.description || "",
           highlights: [],
-          technologies: exp.technologies || []
+          technologies: Array.isArray(exp?.technologies) ? exp.technologies : []
         }))
       : [],
-    education: results.education ? results.education.map(edu => ({
-      institution: edu.school || "",
-      degree: edu.degree || "",
-      field: edu.major || "",
-      startDate: edu.startDate || "",
-      endDate: edu.endDate || "",
-      description: edu.description || ""
-    })) : [],
-    projects: results.projects ? results.projects.map(proj => ({
-      name: proj.name || "",
-      description: proj.description || "",
-      technologies: proj.technologies || [],
-      role: proj.role || "",
-      url: proj.url || ""
-    })) : [],
+    education: Array.isArray(results.education) 
+      ? results.education.map(edu => ({
+          institution: edu?.school || "",
+          degree: edu?.degree || "",
+          field: edu?.major || "",
+          startDate: edu?.startDate || "",
+          endDate: edu?.endDate || "",
+          description: edu?.description || ""
+        })) 
+      : [],
+    projects: Array.isArray(results.projects) 
+      ? results.projects.map(proj => ({
+          name: proj?.name || "",
+          description: proj?.description || "",
+          technologies: Array.isArray(proj?.technologies) ? proj.technologies : [],
+          role: proj?.role || "",
+          url: proj?.url || ""
+        })) 
+      : [],
     certifications: [],
     languages: [],
     rawText: fileContent
   };
-}
-
-/**
- * 从响应中提取JSON
- * @param response - AI响应文本
- * @returns 解析后的JSON对象或null
- */
-function extractJsonFromResponse(response: string): any {
-  try {
-    // 尝试在响应中找到JSON对象
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    return null;
-  } catch (error) {
-    console.error('解析JSON响应失败:', error);
-    return null;
-  }
 }
 
 /**

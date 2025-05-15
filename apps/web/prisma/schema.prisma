@@ -1,0 +1,42 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 岗位模型
+model Job {
+  id                  String           @id @default(cuid())
+  title               String           // 岗位标题
+  description         String           // 原始JD描述
+  jobType             String           // 岗位类型
+  weights             Json             // 各维度权重
+  parsedRequirements  Json             // 解析后的结构化要求
+  vectorMetadata      Json?            // 向量元数据（维度信息等）
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  resumeAnalyses      ResumeAnalysis[] // 关联的简历分析
+}
+
+// 简历分析模型
+model ResumeAnalysis {
+  id              String   @id @default(cuid())
+  jobId           String   // 关联的岗位ID
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeContent   String   // 原始简历内容
+  parsedResume    Json     // 解析后的结构化简历数据
+  totalScore      Float    // 总评分
+  skillScore      Float    // 技能匹配分
+  experienceScore Float    // 经验匹配分
+  matchingPoints  Json     // 匹配要点
+  suggestions     Json     // 改进建议
+  recommended     Boolean  // 是否推荐
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+} 

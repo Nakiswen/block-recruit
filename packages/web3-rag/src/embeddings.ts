@@ -48,7 +48,8 @@ export async function embedText(text: string): Promise<number[]> {
  */
 export function mockEmbedding(text: string): number[] {
   // 创建一个固定长度的向量（实际项目中不要使用这种方法）
-  const dimension = 32;
+  // 注意: 使用1536维度来匹配Supabase数据库的要求
+  const dimension = 1536;
   const embedding = new Array(dimension).fill(0);
   
   // 使用简单的哈希算法为文本生成一些值
@@ -95,7 +96,8 @@ export function simplifiedEmbedding(text: string): number[] {
   }
   
   // 创建固定维度的向量（使用哈希函数将词映射到索引）
-  const dimension = 128;
+  // 注意: 使用1536维度来匹配Supabase数据库的要求
+  const dimension = 1536;
   const embedding = new Array(dimension).fill(0);
   
   Object.entries(wordFreq).forEach(([word, freq]) => {

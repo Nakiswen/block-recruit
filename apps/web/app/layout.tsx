@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Inter } from 'next/font/google';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 // 使用动态导入优化首屏加载性能
 const Navigation = dynamic(
@@ -23,6 +23,10 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const [shootingStars, setShootingStars] = useState<Array<{id: number, top: number, left: number, delay: number}>>([]);
+  
+  // 钱包连接状态
+  const [isConnected, setIsConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
 
   // 创建随机流星效果
   useEffect(() => {
@@ -39,12 +43,40 @@ export default function RootLayout({
     }
     
     setShootingStars(stars);
+    
+    // 检查是否已经连接钱包
+    if (typeof window !== 'undefined') {
+      const savedAddress = localStorage.getItem('walletAuthAddress');
+      const savedAuth = localStorage.getItem('walletAuth');
+      if (savedAddress && savedAuth) {
+        setIsConnected(true);
+        setWalletAddress(savedAddress);
+      }
+    }
+  }, []);
+
+  // 处理钱包连接
+  const handleConnect = useCallback((address: string) => {
+    setIsConnected(true);
+    setWalletAddress(address);
+  }, []);
+
+  // 处理钱包断开连接
+  const handleDisconnect = useCallback(() => {
+    setIsConnected(false);
+    setWalletAddress('');
   }, []);
 
   return (
     <html lang="zh">
       <body className={inter.className}>
-        <Navigation />
+        <Navigation 
+          walletConnectEnabled={true}
+          onConnect={handleConnect}
+          isConnected={isConnected}
+          walletAddress={walletAddress}
+          onDisconnect={handleDisconnect}
+        />
         <main className="container mx-auto px-4 py-8 min-h-screen">
           {/* 装饰元素 */}
           <div className="decoration-wrapper">

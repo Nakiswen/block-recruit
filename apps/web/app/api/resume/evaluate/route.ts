@@ -47,18 +47,82 @@ export async function POST(request: NextRequest) {
     // 5. 解析评估结果
     let parsedResult;
     try {
-      parsedResult = JSON.parse(evaluationResult);
+      // 处理可能包含Markdown代码块的响应
+      let jsonContent = evaluationResult;
+      
+      // 移除Markdown的```json和```标记
+      const codeBlockMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonContent = codeBlockMatch[1];
+      }
+      
+      // 修复常见JSON格式问题
+      jsonContent = jsonContent
+        .replace(/,\s*}(?!\s*[,\]}])/g, '}') // 修复对象末尾多余的逗号
+        .replace(/,\s*](?!\s*[,\]}])/g, ']') // 修复数组末尾多余的逗号
+        .replace(/'/g, '"')  // 将单引号替换为双引号
+        .replace(/([{[,])\s*([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":') // 为没有引号的键名添加引号
+        .trim();
+      
+      try {
+        parsedResult = JSON.parse(jsonContent);
+      } catch (jsonError) {
+        // 如果解析失败，尝试更灵活的解析
+        console.warn('标准JSON解析失败，尝试提取JSON对象:', jsonError);
+        
+        // 查找可能的JSON对象 (使用正则表达式寻找{...}结构)
+        const jsonObjectMatch = jsonContent.match(/\{[\s\S]*\}/);
+        if (jsonObjectMatch) {
+          try {
+            parsedResult = JSON.parse(jsonObjectMatch[0]);
+          } catch (objectError) {
+            console.error('提取JSON对象失败:', objectError);
+            throw new Error('无法解析评估结果中的JSON对象');
+          }
+        } else {
+          throw new Error('评估结果中没有找到有效的JSON对象');
+        }
+      }
     } catch (error) {
-      console.error('解析评估结果失败:', error);
-      parsedResult = { 
-        rawResult: evaluationResult, 
-        error: '评估结果格式解析失败'
+      console.error('解析评估结果失败:', error, '\n原始响应:', evaluationResult);
+      
+      // 构造一个基本的评估结果
+      parsedResult = {
+        overallScore: 5,
+        skillsScore: 5,
+        experienceScore: 5,
+        educationScore: 5,
+        projectsScore: 5,
+        matchingSkills: [],
+        relevantExperience: [],
+        strengths: ["无法自动识别优势"],
+        weaknesses: ["无法自动识别不足"],
+        recommendations: ["请手动评估简历"],
+        summary: "评估结果解析失败，请重新尝试或手动评估",
+        rawResponse: evaluationResult.substring(0, 500) + (evaluationResult.length > 500 ? '...' : '')
       };
     }
     
+    // 确保结果包含所有必要字段
+    const defaultResult = {
+      overallScore: 5,
+      skillsScore: 5,
+      experienceScore: 5,
+      educationScore: 5,
+      projectsScore: 5,
+      matchingSkills: [],
+      relevantExperience: [],
+      strengths: [],
+      weaknesses: [],
+      recommendations: []
+    };
+    
+    // 合并默认值和解析结果
+    const finalResult = {...defaultResult, ...parsedResult};
+    
     // 返回评估结果
     return NextResponse.json({ 
-      evaluation: parsedResult,
+      evaluation: finalResult,
       success: true
     });
     
@@ -125,9 +189,11 @@ function buildEvaluationPrompt(resumeData: ResumeData, jobRequirements: any): st
   
   // 整理职位要求
   const jobTitle = jobRequirements.title || '未知职位';
-  const requiredSkills = jobRequirements.skills?.join(', ') || '未指定技能要求';
+  const requiredSkills = jobRequirements.skills?.required?.join(', ') || '未指定必备技能';
+  const preferredSkills = jobRequirements.skills?.preferred?.join(', ') || '未指定加分技能';
+  const skillsRequirement = `必备: ${requiredSkills}, 加分: ${preferredSkills}`;
   const jobDescription = jobRequirements.description || '未提供职位描述';
-  const experience = jobRequirements.experience || '未指定经验要求';
+  const experience = `最低经验年限: ${jobRequirements.experience?.minYears || '未指定'}, 相关领域: ${jobRequirements.experience?.requiredFields?.join(', ') || '未指定相关领域'}`;
   
   // 构建评估提示
   return `
@@ -135,7 +201,7 @@ function buildEvaluationPrompt(resumeData: ResumeData, jobRequirements: any): st
 
 ## 职位信息:
 - 职位名称: ${jobTitle}
-- 所需技能: ${requiredSkills}
+- 所需技能: ${skillsRequirement}
 - 经验要求: ${experience}
 - 职位描述: ${jobDescription}
 
@@ -158,6 +224,7 @@ ${education}
   "skillsScore": 技能匹配评分(0-10),
   "experienceScore": 经验匹配评分(0-10),
   "educationScore": 教育背景评分(0-10),
+  "projectsScore": 经验匹配评分(0-10),
   "matchingSkills": [
     { 
       "skill": "技能名称", 
@@ -166,10 +233,26 @@ ${education}
       "level": "掌握程度(初级/中级/高级)"
     }
   ],
+  "relevantExperience": [
+    {
+      "company": "公司名称",
+      "position": "职位名称",
+      "relevance": 相关性评分(0-10),
+      "duration": 工作时长(月),
+      "web3Related": 是否Web3相关(true/false)
+    }
+  ],
   "missingSkills": ["职位要求但简历未包含的技能1", ...],
   "strengths": ["优势1", "优势2", ...],
   "weaknesses": ["不足1", "不足2", ...],
-  "summary": "整体评估总结"
+  "recommendations": ["建议1", "建议2", ...]
 }
+
+重要提示:
+1. 直接返回JSON对象，不要使用Markdown代码块包装(不要使用\`\`\`json格式)
+2. 确保输出的JSON格式有效且严格遵循上述结构
+3. 所有评分字段使用数字(0-10)，不要使用字符串
+4. 确保所有数组至少包含一个元素
+5. 不要在JSON中添加注释
 `;
 } 

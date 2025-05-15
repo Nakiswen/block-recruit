@@ -1,4 +1,46 @@
-import { ResumeData } from '../../resume-parser/types';
+/**
+ * 简历数据接口
+ */
+export interface ResumeData {
+  /** 个人信息 */
+  personalInfo?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    website?: string;
+    linkedin?: string;
+    github?: string;
+  };
+  /** 原始文本 */
+  rawText?: string;
+  /** 技能列表 */
+  skills?: string[];
+  /** 工作经验 */
+  workExperience?: Array<{
+    company?: string;
+    position?: string;
+    startDate?: string;
+    endDate?: string;
+    technologies?: string[];
+    description?: string;
+  }>;
+  /** 项目经验 */
+  projects?: Array<{
+    name?: string;
+    role?: string;
+    technologies?: string[];
+    description?: string;
+  }>;
+  /** 教育背景 */
+  education?: Array<{
+    school?: string;
+    degree?: string;
+    major?: string;
+    startDate?: string;
+    endDate?: string;
+  }>;
+}
 
 /**
  * Web3技能信息接口

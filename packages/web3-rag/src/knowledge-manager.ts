@@ -44,7 +44,9 @@ export class Web3KnowledgeManager {
       createdAt: now,
       updatedAt: now,
       skills: [],
-      resources: []
+      resources: [],
+      version: '1.0',
+      lastUpdated: now.toISOString()
     };
     
     KNOWLEDGE_BASES.set(id, knowledgeBase);

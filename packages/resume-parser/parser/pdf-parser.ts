@@ -35,9 +35,11 @@ export async function extractTextFromPdf(file: File | Uint8Array): Promise<strin
   const pdfjs = await import('pdfjs-dist/build/pdf');
   const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
   
-  // 设置worker
+  // 设置worker并禁用控制台警告
   if (typeof window !== 'undefined') {
     (pdfjs as any).GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    // 禁用 "Setting up fake worker" 警告
+    (pdfjs as any).verbosity = (pdfjs as any).VerbosityLevel.ERRORS;
   }
 
   // 准备数据
