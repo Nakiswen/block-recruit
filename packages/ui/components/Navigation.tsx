@@ -16,10 +16,11 @@ interface NavigationProps {
   logo?: React.ReactNode;
   items?: NavigationItem[];
   walletConnectEnabled?: boolean;
-  onConnect?: () => void;
+  onConnect?: (address: string) => void;
   isConnected?: boolean;
   walletAddress?: string;
   onDisconnect?: () => void;
+  showMenu?: boolean;
 }
 
 const defaultItems = [
@@ -37,6 +38,7 @@ const Navigation: React.FC<NavigationProps> = ({
   isConnected = false,
   walletAddress = '',
   onDisconnect,
+  showMenu = false,
 }) => {
   const pathname = usePathname();
   
@@ -103,9 +105,11 @@ const Navigation: React.FC<NavigationProps> = ({
                 <div className="flex flex-shrink-0 items-center">
                   {logoElement}
                 </div>
+                {showMenu && (
                 <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
                   {items.map(renderNavItems)}
                 </div>
+                )}
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
                 {walletConnectEnabled && (
@@ -117,6 +121,7 @@ const Navigation: React.FC<NavigationProps> = ({
                   />
                 )}
               </div>
+              {showMenu && (
               <div className="-mr-2 flex items-center sm:hidden">
                 <Disclosure.Button className="inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500">
                   <span className="sr-only">打开主菜单</span>
@@ -127,14 +132,21 @@ const Navigation: React.FC<NavigationProps> = ({
                   )}
                 </Disclosure.Button>
               </div>
+              )}
             </div>
           </div>
 
+          {showMenu && (
           <Disclosure.Panel className="sm:hidden">
             <div className="space-y-1 pb-3 pt-2">
               {items.map(renderMobileNavItems)}
-              {walletConnectEnabled && (
-                <div className="mt-4 px-4">
+              </div>
+            </Disclosure.Panel>
+          )}
+          
+          {!showMenu && walletConnectEnabled && (
+            <Disclosure.Panel className="sm:hidden">
+              <div className="mt-4 px-4 pb-3 pt-2">
                   <WalletConnect
                     onConnect={onConnect}
                     isConnected={isConnected}
@@ -142,9 +154,8 @@ const Navigation: React.FC<NavigationProps> = ({
                     onDisconnect={onDisconnect}
                   />
                 </div>
+            </Disclosure.Panel>
               )}
-            </div>
-          </Disclosure.Panel>
         </>
       )}
     </Disclosure>

@@ -76,6 +76,7 @@ export default function RootLayout({
           isConnected={isConnected}
           walletAddress={walletAddress}
           onDisconnect={handleDisconnect}
+          showMenu={false}
         />
         <main className="container mx-auto px-4 py-8 min-h-screen">
           {/* 装饰元素 */}
@@ -131,7 +132,7 @@ export default function RootLayout({
                   <span className="gradient-text">BlockRecruit</span>
                 </Link>
                 <p className="text-gray-300 mb-4">
-                  将AI与区块链技术相结合，打造Web3行业的专业招聘解决方案
+                  将AI与区块链技术相结合，为Web3人才提供可验证的技能证明与精准岗位匹配
                 </p>
               </div>
               
@@ -139,8 +140,21 @@ export default function RootLayout({
                 <div>
                   <h4 className="text-lg font-bold mb-4"><span className="gradient-text">产品</span></h4>
                   <ul className="space-y-2">
-                    <li><Link href="/resume-screening" className="text-gray-300 hover:text-white transition-colors duration-200">简历筛选</Link></li>
-                    <li><Link href="/interview" className="text-gray-300 hover:text-white transition-colors duration-200">智能面试官</Link></li>
+                    <li>
+                      <Link href="/resume-screening" className="text-gray-300 hover:text-white transition-colors duration-200">
+                        岗位匹配
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="/interview" className="text-gray-300 hover:text-white transition-colors duration-200">
+                        技能验证
+                      </Link>
+                    </li>
+                    <li>
+                      <Link href="#" className="text-gray-300 hover:text-white transition-colors duration-200">
+                        链上证明
+                      </Link>
+                    </li>
                   </ul>
                 </div>
                 <div>
