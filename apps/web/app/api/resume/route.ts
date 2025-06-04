@@ -64,11 +64,11 @@ export async function POST(req: Request) {
       data: {
         jobId,
         resumeContent,
-        parsedResume,
+        parsedResume: JSON.stringify(parsedResume), // 将复杂对象转换为JSON字符串存储
         totalScore,
         skillScore,
         experienceScore,
-        matchingPoints,
+        matchingPoints: JSON.stringify(matchingPoints), // 将复杂对象转换为JSON字符串存储
         suggestions,
         recommended: totalScore >= 7 // 根据评分决定是否推荐
       }

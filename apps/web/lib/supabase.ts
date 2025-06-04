@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
 /**
  * 获取Supabase客户端实例
@@ -33,7 +33,7 @@ export function getSupabaseAdminClient() {
 }
 
 // 延迟加载的单例实例
-let supabaseClient: ReturnType<typeof createClient> | null = null
+let supabaseClient: SupabaseClient | null = null
 
 /**
  * 获取Supabase客户端的单例实例
@@ -42,7 +42,8 @@ let supabaseClient: ReturnType<typeof createClient> | null = null
  */
 export function getVectorStoreClient() {
   if (!supabaseClient) {
-    supabaseClient = getSupabaseClient()
+    // 显式声明变量类型以解决类型不匹配问题
+    supabaseClient = getSupabaseClient() as ReturnType<typeof getSupabaseClient>
   }
   return supabaseClient
-} 
+}

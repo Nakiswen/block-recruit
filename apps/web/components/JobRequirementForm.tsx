@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from 'ui';
 
 interface JobPosition {
   title: string;
@@ -74,8 +73,10 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
 
   // 使用useCallback优化函数
   const handleCustomChange = useCallback(() => {
-    const { isCustom, customPosition, selectedPosition, level, requiredSkills, preferredSkills, experienceYears, requiredFields } = stateRef.current;
+    // 从stateRef获取最新状态，但selectedPosition不在stateRef中
+    const { isCustom, customPosition, level, requiredSkills, preferredSkills, experienceYears, requiredFields } = stateRef.current;
     
+    // 修复：直接使用组件中的selectedPosition状态变量
     const title = isCustom ? customPosition : selectedPosition;
     const requirements = {
       title,
@@ -90,7 +91,7 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
       },
     };
     onChange(requirements);
-  }, [onChange]);
+  }, [onChange, selectedPosition]);
 
   // 当选择预定义职位时更新表单
   useEffect(() => {

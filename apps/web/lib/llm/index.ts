@@ -3,13 +3,8 @@ import {
   fetchJobVectors,
   storeJobVectors,
   storeResumeVectors,
-  fetchResumeVectors,
   calculateCosineSimilarity,
 } from "./vector-store";
-import { OpenAIStream, StreamingTextResponse, createStreamableUI } from 'ai';
-import { Configuration, OpenAIApi } from 'openai-edge';
-import { JD_ANALYSIS_PROMPT } from './prompts';
-import { convertTextToEmbedding, createSupabaseClient } from './vector-store';
 
 // 获取API密钥，优先使用请求中的API密钥
 function getApiKey(headers?: Headers) {

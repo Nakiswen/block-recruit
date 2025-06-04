@@ -74,31 +74,6 @@ export default function Interview() {
     }
   }, [feedbackTimer]);
 
-  // 提交当前答案
-  const submitAnswer = useCallback(() => {
-    if (currentAnswer.trim()) {
-      const newAnswers = [...answers];
-      newAnswers[currentQuestion] = currentAnswer;
-      setAnswers(newAnswers);
-      
-      if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setCurrentAnswer('');
-      } else {
-        // 面试完成，生成反馈
-        setIsInterviewComplete(true);
-        generateFeedback(newAnswers);
-      }
-    }
-  }, [answers, currentAnswer, currentQuestion, questions.length]);
-
-  // 回到上一题
-  const goToPreviousQuestion = useCallback(() => {
-    if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1);
-      setCurrentAnswer(answers[currentQuestion - 1] || '');
-    }
-  }, [answers, currentQuestion]);
 
   // 模拟生成面试反馈
   const generateFeedback = useCallback((finalAnswers: string[]) => {
@@ -126,6 +101,32 @@ export default function Interview() {
     setFeedbackTimer(timer);
   }, []);
 
+  // 提交当前答案
+  const submitAnswer = useCallback(() => {
+    if (currentAnswer.trim()) {
+      const newAnswers = [...answers];
+      newAnswers[currentQuestion] = currentAnswer;
+      setAnswers(newAnswers);
+      
+      if (currentQuestion < questions.length - 1) {
+        setCurrentQuestion(currentQuestion + 1);
+        setCurrentAnswer('');
+      } else {
+        // 面试完成，生成反馈
+        setIsInterviewComplete(true);
+        generateFeedback(newAnswers);
+      }
+    }
+  }, [answers, currentAnswer, currentQuestion, questions.length, generateFeedback]);
+
+  // 回到上一题
+  const goToPreviousQuestion = useCallback(() => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
+      setCurrentAnswer(answers[currentQuestion - 1] || '');
+    }
+  }, [answers, currentQuestion]);
+
   // 处理职位选择变更
   const handlePositionChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setPosition(e.target.value);
@@ -140,6 +141,15 @@ export default function Interview() {
   const handleReturnToHome = useCallback(() => {
     setIsInterviewStarted(false);
   }, []);
+
+  function resetProcess(): void {
+    setIsInterviewStarted(false);
+    setIsInterviewComplete(false);
+    setCurrentQuestion(0);
+    setAnswers([]);
+    setCurrentAnswer('');
+    setFeedback(null);
+  }
 
   return (
     <div className="max-w-5xl mx-auto">

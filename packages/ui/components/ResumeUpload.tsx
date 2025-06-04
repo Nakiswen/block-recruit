@@ -83,11 +83,14 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
 
   // 组件卸载时清理
   useEffect(() => {
+    // 在 effect 内部捕获当前的 ref 值
+    const currentFileInput = fileInputRef.current;
+    
     return () => {
       // 释放文件引用以避免内存泄露
       setFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      if (currentFileInput) {
+        currentFileInput.value = '';
       }
     };
   }, []);

@@ -132,9 +132,11 @@ export async function POST(req: Request) {
     // 生成向量，传递请求头
     let vectors
     try {
-      vectors = await generateJobVectors(parsedJD, req.headers)
+      // 调用生成向量的函数，将请求头转换为字符串格式
+      const headerString = JSON.stringify(Object.fromEntries(req.headers.entries()))
+      vectors = await generateJobVectors(parsedJD, headerString)
       
-      // 验证向量
+      // 验证向量结果的完整性
       if (!vectors || !vectors.description || !vectors.requirements || !vectors.responsibilities) {
         throw new Error('向量生成失败: 返回了无效的格式')
       }

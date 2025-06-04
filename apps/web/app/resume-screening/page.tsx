@@ -250,7 +250,7 @@ export default function ResumeScreening() {
       setErrorMessage(error instanceof Error ? error.message : '评估过程中发生未知错误');
       setIsEvaluating(false);
     }
-  }, [resumeFile, jobRequirements, useAI]);
+  }, [resumeFile, jobRequirements]);
 
   const resetProcess = useCallback(() => {
     setStep(1);

@@ -1,6 +1,7 @@
-// 使用更简单的声明方式
-declare module 'pdfjs-dist/build/pdf';
-declare module 'pdfjs-dist/build/pdf.worker.entry';
+// 导入PDF.js库的类型声明
+import { PDFDocumentProxy } from 'pdfjs-dist';
+// 导入PDF.js，需要在tsconfig.json中配置moduleResolution
+import 'pdfjs-dist/build/pdf.worker.entry';
 
 import { ResumeData } from '../types';
 import { parseResume } from '../parser';
@@ -15,7 +16,7 @@ class ApiAgent implements Agent {
   private batchPrompts: string[] = [];
   private batchResponses: string[] = [];
   
-  constructor(apiUrl = '/api/ai') {
+  constructor() {
     // 初始化Mastra代理
     this.mastraAgent = new AgentWrapper();
   }

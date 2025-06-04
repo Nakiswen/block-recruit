@@ -10,20 +10,20 @@ export default function ResumeAnalysisPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const fetchAnalysis = async () => {
+      try {
+        const response = await fetch(`/api/resume/${id}`)
+        const { data } = await response.json()
+        setAnalysis(data)
+      } catch (error) {
+        setError('获取分析结果失败')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchAnalysis()
   }, [id])
-
-  const fetchAnalysis = async () => {
-    try {
-      const response = await fetch(`/api/resume/${id}`)
-      const { data } = await response.json()
-      setAnalysis(data)
-    } catch (error) {
-      setError('获取分析结果失败')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return <div className="p-8">加载中...</div>

@@ -87,7 +87,7 @@ const ResumeAIParser: React.FC<ResumeAIParserProps> = ({
       
       // 短暂延迟后传递解析结果
       setTimeout(() => {
-        if (handleComplete) {
+        if (handleComplete && result.data) {
           handleComplete(result.data);
         }
         setIsProcessing(false);

@@ -15,6 +15,22 @@ export default function ResumePage() {
   const [isWalletConnected, setIsWalletConnected] = useState(false)
   const [connectingWallet, setConnectingWallet] = useState(false)
 
+  // 检查钱包连接状态
+  const checkWalletConnection = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const walletAuth = localStorage.getItem('walletAuth')
+      const walletAddress = localStorage.getItem('walletAuthAddress')
+      setIsWalletConnected(!!(walletAuth && walletAddress))
+    }
+  }, [])
+
+  // 监听localStorage变化，用于跨组件同步钱包状态
+  const handleStorageChange = useCallback((event: StorageEvent) => {
+    if (event.key === 'walletAuth' || event.key === 'walletAuthAddress') {
+      checkWalletConnection()
+    }
+  }, [checkWalletConnection])
+
   // 页面加载时获取岗位列表和检查钱包状态
   useEffect(() => {
     fetchJobs()
@@ -25,24 +41,9 @@ export default function ResumePage() {
     return () => {
       window.removeEventListener('storage', handleStorageChange)
     }
-  }, [])
+  }, [checkWalletConnection, handleStorageChange])
   
-  // 监听localStorage变化，用于跨组件同步钱包状态
-  const handleStorageChange = useCallback((event: StorageEvent) => {
-    if (event.key === 'walletAuth' || event.key === 'walletAuthAddress') {
-      checkWalletConnection()
-    }
-  }, [])
-  
-  // 检查钱包连接状态
-  const checkWalletConnection = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const walletAuth = localStorage.getItem('walletAuth')
-      const walletAddress = localStorage.getItem('walletAuthAddress')
-      setIsWalletConnected(!!(walletAuth && walletAddress))
-    }
-  }, [])
-  
+
   // 处理钱包连接
   const handleConnectWallet = useCallback(async () => {
     try {
