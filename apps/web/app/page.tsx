@@ -17,40 +17,6 @@ interface NFT {
   bgColor?: string; // 添加可选的背景色属性
 }
 
-// Mock数据
-const MOCK_RESUME = {
-  id: 'mock-resume-1',
-  name: '张三',
-  email: 'zhangsan@example.com',
-  phone: '13800138000',
-  education: [
-    {
-      school: '北京大学',
-      degree: '计算机科学与技术',
-      startDate: '2016-09',
-      endDate: '2020-06',
-      gpa: '3.8/4.0'
-    }
-  ],
-  workExperience: [
-    {
-      company: 'Web3公司',
-      title: '区块链开发工程师',
-      startDate: '2020-07',
-      endDate: '2022-12',
-      description: '负责智能合约开发及区块链应用架构设计'
-    },
-    {
-      company: '区块链创业公司',
-      title: '全栈开发',
-      startDate: '2019-01',
-      endDate: '2020-06',
-      description: '参与DeFi项目开发，实现前端与智能合约交互'
-    }
-  ],
-  skills: ['Solidity', 'Ethereum', 'React', 'Web3.js', 'TypeScript', 'Smart Contracts']
-};
-
 const MOCK_JOBS = [
   {
     id: 'job-1',
@@ -798,7 +764,10 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     className="bg-white text-indigo-600 hover:bg-gray-50"
-                    onClick={() => setActivePage('jobs')}
+                    onClick={() => {
+                      // setActivePage('jobs');
+                      window.location.href = '/jobs'; // 跳转到新页面
+                    }}
                   >
                     查看匹配岗位
                   </Button>
@@ -820,101 +789,7 @@ export default function Home() {
   
   // 岗位列表页面
   if (activePage === 'jobs') {
-    return (
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">匹配岗位 ({matchedJobs.length})</h2>
-          <Button variant="outline" onClick={() => setActivePage('home')}>
-            返回主页
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          {matchedJobs.map(job => {
-            const isExpanded = expandedState[job.id] || false;
-            const isApplied = appliedJobId === job.id;
-            
-            return (
-              <div key={job.id} className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-                <div className="flex justify-between items-start">
-                  <div className="flex-grow">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-semibold">{job.title} <span className="text-blue-600 font-medium ml-2">{job.salary}</span></h3>
-                    </div>
-                    <p className="text-gray-600">{job.company} · {job.location}</p>
-                  </div>
-                  <div className="bg-purple-100 text-purple-800 font-medium px-3 py-1 rounded-full text-sm ml-4">
-                    匹配度 {job.matchScore}%
-                  </div>
-                </div>
-                
-                {/* 默认显示岗位要求 */}
-                <div className="mt-4 border border-gray-100 rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-2">岗位要求</h4>
-                  <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    {job.requirements.map((req: string, index: number) => (
-                      <li key={index}>{req}</li>
-                    ))}
-                  </ul>
-                </div>
-                
-                {/* 点击展开后显示详细描述 */}
-                {isExpanded && (
-                  <div className="mt-4 animate-fadeIn">
-                    <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
-                    <p className="text-gray-700">{job.description}</p>
-                  </div>
-                )}
-                
-                <div className="mt-6 flex justify-between items-center">
-                  <button 
-                    className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
-                    onClick={() => toggleJobExpanded(job.id)}
-                  >
-                    {isExpanded ? '收起详情' : '查看详情'}
-                    <svg 
-                      className={`ml-1 w-4 h-4 transition-transform ${isExpanded ? 'transform rotate-180' : ''}`} 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24" 
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </button>
-                  <div className="flex items-center">
-                    {isApplied && (
-                      <div className="animate-fadeIn mr-4 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        申请成功
-                      </div>
-                    )}
-                    <Button 
-                      onClick={() => handleApplyJob(job.id)}
-                      disabled={isApplied}
-                    >
-                      {isApplied ? '已申请' : '申请并发送证明'}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        
-        <style jsx>{`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          .animate-fadeIn {
-            animation: fadeIn 0.3s ease-in-out;
-          }
-        `}</style>
-      </div>
-    );
+    return null; // 迁移到新页面后，这里不再渲染岗位列表
   }
   
   // NFT证明页面
