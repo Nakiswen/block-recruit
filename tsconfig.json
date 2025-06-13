@@ -19,6 +19,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": ["**/*.ts", "**/*.tsx", "apps/api/jest.config.js"],
   "exclude": ["node_modules"]
 } 

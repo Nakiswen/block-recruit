@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from './web3jobs';
 
 const prisma = new PrismaClient();
 

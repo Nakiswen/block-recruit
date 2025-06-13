@@ -3,6 +3,7 @@ import Koa from 'koa';
 import bodyParser from 'koa-bodyparser';
 import resumesRouter from '../routes/resumes';
 import jwt from 'jsonwebtoken';
+import { jest, describe, it, expect } from '@jest/globals';
 
 // 创建 Koa 实例并挂载路由
 const app = new Koa();

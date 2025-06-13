@@ -1,5 +1,5 @@
 import Router from 'koa-router';
-import prisma from '../prisma';
+import prisma from '../prisma/web3cv';
 import redis from '../utils/redis';
 import type { Context } from 'koa';
 

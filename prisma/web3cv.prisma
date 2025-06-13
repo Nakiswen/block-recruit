@@ -3,11 +3,12 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../apps/api/src/prisma/web3cv"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("WEB3CV_DATABASE_URL")
 }
 
 /// 用户表，记录所有注册用户的钱包地址及基础信息
@@ -20,6 +21,7 @@ model User {
   updatedAt DateTime @updatedAt             // 更新时间
   applications Application[]                // 用户的投递记录
   nftProofs    NFTProof[]                   // 用户的NFT证明
+  resumes     Resume[]                      // 用户的简历
 }
 
 /// 岗位表，记录所有招聘岗位信息
@@ -35,6 +37,17 @@ model Job {
   updatedAt           DateTime         @updatedAt
   resumeAnalyses      ResumeAnalysis[] // 关联的简历分析
   applications        Application[]    // 关联的投递记录
+}
+
+/// 简历表，记录用户上传的简历
+model Resume {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String   // 原始简历内容
+  parsedContent Json?  // 解析后的结构化内容
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 /// 简历分析表，记录简历与岗位的匹配分析结果

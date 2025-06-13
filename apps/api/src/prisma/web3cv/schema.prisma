@@ -1,0 +1,90 @@
+// 区块链招聘平台核心表结构
+// 版本：v2.0
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/src/prisma/web3cv"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("WEB3CV_DATABASE_URL")
+}
+
+/// 用户表，记录所有注册用户的钱包地址及基础信息
+model User {
+  id           String        @id @default(cuid())
+  address      String        @unique // 钱包地址，唯一
+  nickname     String? // 用户昵称
+  email        String? // 邮箱（可选）
+  createdAt    DateTime      @default(now()) // 注册时间
+  updatedAt    DateTime      @updatedAt // 更新时间
+  applications Application[] // 用户的投递记录
+  nftProofs    NFTProof[] // 用户的NFT证明
+  resumes      Resume[] // 用户的简历
+}
+
+/// 岗位表，记录所有招聘岗位信息
+model Job {
+  id                 String           @id @default(cuid())
+  title              String // 岗位标题
+  description        String // 原始JD描述
+  jobType            String // 岗位类型
+  weights            Json // 各维度权重
+  parsedRequirements Json // 解析后的结构化要求
+  vectorMetadata     Json? // 向量元数据（维度信息等）
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  resumeAnalyses     ResumeAnalysis[] // 关联的简历分析
+  applications       Application[] // 关联的投递记录
+}
+
+/// 简历表，记录用户上传的简历
+model Resume {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content       String // 原始简历内容
+  parsedContent Json? // 解析后的结构化内容
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+/// 简历分析表，记录简历与岗位的匹配分析结果
+model ResumeAnalysis {
+  id              String   @id @default(cuid())
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeContent   String // 原始简历内容
+  parsedResume    Json // 解析后的结构化简历数据
+  totalScore      Float // 总评分
+  skillScore      Float // 技能匹配分
+  experienceScore Float // 经验匹配分
+  matchingPoints  Json // 匹配要点
+  suggestions     Json // 改进建议
+  recommended     Boolean // 是否推荐
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// 投递记录表，记录用户对岗位的投递行为
+model Application {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id])
+  status    String // 投递状态，如 pending, accepted, rejected
+  createdAt DateTime @default(now())
+}
+
+/// NFT证明表，记录用户的链上成就/组织等证明
+model NFTProof {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  nftType  String // 成就/组织等类型
+  tokenId  String // 链上TokenId
+  txHash   String // 链上交易哈希
+  mintedAt DateTime // 铸造时间
+}

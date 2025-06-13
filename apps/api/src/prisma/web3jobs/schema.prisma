@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../apps/api/src/prisma/web3jobs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("WEB3JOBS_DATABASE_URL")
+}
+
+/// 职位发布表 - 存储从其他招聘网站爬取的职位信息
+model job_posting {
+  topic_id             BigInt   @id // 主题ID，作为主键
+  content              String? // 职位描述内容1
+  content2             String? // 职位描述内容2
+  content3             String? // 职位描述内容3
+  content5             String? // 职位描述内容5
+  email                String?  @db.VarChar(255) // 联系邮箱
+  phone                String?  @db.VarChar(20) // 联系电话
+  wechat               String?  @db.VarChar(50) // 微信联系方式
+  telegram             String?  @db.VarChar(50) // Telegram联系方式
+  position_name        String   @db.VarChar(100) // 职位名称
+  position_id          BigInt? // 职位ID
+  view_count           Int?     @default(0) // 职位浏览次数
+  applied              Boolean? @default(false) // 是否已申请
+  apply_count          Int?     @default(0) // 申请人数
+  create_time          BigInt? // 职位创建时间戳
+  url                  String? // 原始职位链接
+  work_type_id         Int? // 工作类型ID
+  work_type_name       String?  @db.VarChar(50) // 工作类型名称（如：全职、兼职等）
+  office_mode_id       Int? // 办公模式ID
+  office_mode_name     String?  @db.VarChar(50) // 办公模式名称（如：远程、现场等）
+  company              String   @db.VarChar(100) // 公司名称
+  company_introduction String? // 公司介绍
+  company_size_name    String?  @db.VarChar(50) // 公司规模
+  company_logo         String? // 公司logo URL
+  company_website      String? // 公司官网
+  company_id           BigInt? // 公司ID
+  min_salary           Decimal? @db.Decimal(10, 2) // 最低薪资
+  max_salary           Decimal? @db.Decimal(10, 2) // 最高薪资
+  lever_id             Int? // 职级ID
+  lever_name           String?  @db.VarChar(50) // 职级名称（如：初级、中级、高级等）
+  location             String?  @db.VarChar(255) // 工作地点
+  base                 String?  @db.VarChar(50) // 基础信息
+  ffrom                String?  @db.VarChar(50) // 数据来源
+  status               Int?     @default(0) // 职位状态（0: 默认, 1: 已关闭等）
+}
+
+/// 职位标签关系表 - 存储职位与标签的多对多关系
+model job_tag_relation {
+  topic_id BigInt // 职位主题ID
+  tag_id   BigInt // 标签ID
+  ffrom    String? @db.VarChar(50) // 数据来源
+
+  @@id([topic_id, tag_id]) // 联合主键：职位ID + 标签ID
+}
+
+/// 标签表 - 存储职位相关的标签信息
+model tag {
+  tag_id   BigInt  @id // 标签ID，主键
+  tag_name String  @db.VarChar(100) // 标签名称
+  ffrom    String? @db.VarChar(50) // 数据来源
+}
+
+/// 发布岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
+model user_info {
+  id             BigInt   @id // 用户ID，主键
+  nickname       String   @db.VarChar(255) // 用户昵称
+  avatar         String? // 用户头像URL
+  small_avatar   String? // 用户小头像URL
+  topic_count    Int?     @default(0) // 发帖数量
+  comment_count  Int?     @default(0) // 评论数量
+  fans_count     Int?     @default(0) // 粉丝数量
+  follow_count   Int?     @default(0) // 关注数量
+  score          Int? // 用户积分
+  description    String? // 用户简介
+  create_time    BigInt? // 账号创建时间戳
+  wallet_address String?  @db.VarChar(255) // 钱包地址
+  ffrom          String?  @db.VarChar(50) // 数据来源
+  followed       Boolean? @default(false) // 是否已关注
+}

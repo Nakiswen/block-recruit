@@ -10,6 +10,18 @@ const app = new Koa();
 app.use(bodyParser());
 app.use(jobsRouter.routes()).use(jobsRouter.allowedMethods());
 
+// Mock Redis
+jest.mock('../utils/redis', () => ({
+  // @ts-ignore -- jest mock
+  get: jest.fn(),
+  // @ts-ignore -- jest mock
+  set: jest.fn(),
+  // @ts-ignore -- jest mock
+  flushall: jest.fn(),
+  // @ts-ignore -- jest mock
+  quit: jest.fn()
+}));
+
 describe('GET /jobs', () => {
   const server = app.callback();
 

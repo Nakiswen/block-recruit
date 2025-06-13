@@ -1,15 +1,22 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Node",
+    "allowSyntheticDefaultImports": true,
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "ts-node": {
+    "esm": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
-} 
+}
