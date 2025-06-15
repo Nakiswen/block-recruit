@@ -1,7 +1,5 @@
 import Router from 'koa-router';
-import prisma from '../prisma/web3cv';
-import redis from '../utils/redis';
-import type { Context } from 'koa';
+import * as jobsController from '@/controllers/jobsController';
 
 const router = new Router({ prefix: '/jobs' });
 
@@ -27,36 +25,6 @@ const router = new Router({ prefix: '/jobs' });
  *       200:
  *         description: 返回岗位列表
  */
-router.get('/', async (ctx: Context) => {
-  const page = Number(ctx.query.page) || 1;
-  const pageSize = Number(ctx.query.pageSize) || 20;
-  const skip = (page - 1) * pageSize;
-  const cacheKey = `job_list_${page}_${pageSize}`;
-
-  // 优先查缓存
-  const cache = await redis.get(cacheKey);
-  if (cache) {
-    ctx.body = { code: 0, data: JSON.parse(cache), cache: true };
-    return;
-  }
-
-  // 查询数据库，建议为 createdAt 字段建索引
-  const jobs = await prisma.job.findMany({
-    orderBy: { createdAt: 'desc' },
-    skip,
-    take: pageSize,
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      jobType: true,
-      createdAt: true,
-      // 只查需要的字段，减少数据量
-    },
-  });
-
-  await redis.set(cacheKey, JSON.stringify(jobs), 'EX', 60); // 缓存60秒
-  ctx.body = { code: 0, data: jobs, cache: false };
-});
+router.get('/', jobsController.getJobList);
 
 export default router; 

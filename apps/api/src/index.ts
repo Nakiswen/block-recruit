@@ -6,6 +6,8 @@ import { koaSwagger } from 'koa2-swagger-ui';
 import dotenv from 'dotenv';
 // 注意：这里需要添加 .js 扩展名（即使是 .ts 文件）
 import authRouter from './routes/auth';
+import applicationsRouter from './routes/applications';
+import nftRouter from './routes/nft';
 
 // 加载环境变量
 dotenv.config();
@@ -41,12 +43,14 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
 app.use(bodyParser());
 app.use(router.routes()).use(router.allowedMethods());
 app.use(authRouter.routes()).use(authRouter.allowedMethods());
+app.use(applicationsRouter.routes()).use(applicationsRouter.allowedMethods());
+app.use(nftRouter.routes()).use(nftRouter.allowedMethods());
 
 // 挂载Swagger文档 - 使用 koa2-swagger-ui
 app.use(koaSwagger({
   routePrefix: '/docs',
   swaggerOptions: {
-    spec: swaggerSpec,
+    spec: swaggerSpec as Record<string, unknown>,
   }
 }));
 

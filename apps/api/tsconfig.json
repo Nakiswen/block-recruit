@@ -12,11 +12,15 @@
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "ts-node": {
     "esm": true
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/jest.config.js", "src/test/__mocks__/custom-mocks.js"],
   "exclude": ["node_modules", "dist"]
 }

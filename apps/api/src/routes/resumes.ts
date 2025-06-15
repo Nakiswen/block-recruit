@@ -1,7 +1,6 @@
 import Router from 'koa-router';
-import prisma from '../prisma/web3cv';
 import { jwtAuth } from '../middleware/jwt';
-import type { Context } from 'koa';
+import * as resumesController from '@/controllers/resumesController';
 
 const router = new Router({ prefix: '/resumes' });
 
@@ -26,23 +25,7 @@ const router = new Router({ prefix: '/resumes' });
  *       200:
  *         description: 上传成功，返回简历ID
  */
-router.post('/upload', jwtAuth, async (ctx: Context) => {
-  const { content } = ctx.request.body as { content: string };
-  if (!content) {
-    ctx.status = 400;
-    ctx.body = { error: '简历内容不能为空' };
-    return;
-  }
-  // 这里可集成简历解析逻辑，暂存原始内容
-  const resume = await prisma.resume.create({
-    data: {
-      userId: ctx.state.user.id,
-      content,
-      // parsedContent: {}, // 可扩展：解析后的结构化内容
-    },
-  });
-  ctx.body = { code: 0, data: { id: resume.id } };
-});
+router.post('/upload', jwtAuth, resumesController.uploadResume);
 
 /**
  * @swagger
@@ -66,26 +49,6 @@ router.post('/upload', jwtAuth, async (ctx: Context) => {
  *       200:
  *         description: 匹配分析结果
  */
-router.post('/match', jwtAuth, async (ctx: Context) => {
-  const { resumeId, jobId } = ctx.request.body as { resumeId: string; jobId: string };
-  if (!resumeId || !jobId) {
-    ctx.status = 400;
-    ctx.body = { error: '参数不完整' };
-    return;
-  }
-
-  // 查询简历和岗位
-  const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-  const job = await prisma.job.findUnique({ where: { id: jobId } });
-  if (!resume || !job) {
-    ctx.status = 404;
-    ctx.body = { error: '简历或岗位不存在' };
-    return;
-  }
-
-  //  TODO: 可集成实际的匹配分析算法，暂返回简单示例
-  const matchScore = Math.random() * 100;
-  ctx.body = { code: 0, data: { matchScore, message: '匹配分析仅为示例' } };
-});
+router.post('/match', jwtAuth, resumesController.matchResumeToJob);
 
 export default router; 
