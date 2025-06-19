@@ -24,8 +24,10 @@
   "dependencies": {
     "@headlessui/react": "^1.7.18",
     "@prisma/client": "^5.22.0",
+    "axios": "^1.6.2",
     "bufferutil": "^4.0.9",
     "lucide-react": "^0.511.0",
+    "mastra": "^0.4.9",
     "next": "^13.4.1",
     "utf-8-validate": "^6.0.5",
     "web": "^0.0.2"

@@ -12,21 +12,27 @@
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "prisma:generate:web3cv": "prisma generate --schema=prisma/web3cv.prisma",
-    "prisma:generate:web3jobs": "prisma generate --schema=prisma/web3jobs.prisma"
+    "prisma:generate:web3jobs": "prisma generate --schema=prisma/web3jobs.prisma",
+    "test:rag": "tsc src/test/rag-test.ts",
+    "test:resume-rag": "tsc src/test/resume-rag-test.ts",
+    "test:job-resume-match": "tsc src/test/job-resume-match-test.ts"
   },
   "dependencies": {
+    "@pinecone-database/pinecone": "^6.0.0",
     "@prisma/client": "^5.0.0",
-    "dotenv": "^16.0.3",
     "ethers": "^6.7.0",
     "jsonwebtoken": "^9.0.0",
     "koa": "^2.14.2",
     "koa-bodyparser": "^4.3.0",
     "koa-router": "^12.0.0",
     "koa2-swagger-ui": "^5.11.0",
+    "onnxruntime-node": "1.22.0-rev",
     "serverless-http": "^3.2.0",
-    "swagger-jsdoc": "^6.2.8"
+    "swagger-jsdoc": "^6.2.8",
+    "transformers": "^3.1.0"
   },
   "devDependencies": {
+    "@huggingface/inference": "^4.0.5",
     "@jest/globals": "^30.0.0",
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.0",
@@ -36,6 +42,7 @@
     "@types/node": "^20.0.0",
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
+    "dotenv": "^16.5.0",
     "dotenv-cli": "^8.0.0",
     "jest": "^29.7.0",
     "jest-mock-extended": "4.0.0-beta1",
