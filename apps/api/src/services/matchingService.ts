@@ -12,7 +12,7 @@ export const matchingService = {
    * @param filters 匹配过滤条件
    * @returns 匹配结果，包含匹配度和匹配原因
    */
-  async matchJobsForResume(resumeId: string, filters: {
+  async getMatchedJobsForResume(resumeId: string, filters: {
     minMatchScore?: number,
     location?: string,
     industry?: string,
@@ -98,7 +98,7 @@ export const matchingService = {
    * @param filters 匹配过滤条件
    * @returns 匹配结果，包含匹配度和匹配原因
    */
-  async matchResumesForJob(jobId: string, filters: {
+  async getMatchedResumesForJob(jobId: string, filters: {
     minMatchScore?: number,
     location?: string,
     educationLevel?: string,

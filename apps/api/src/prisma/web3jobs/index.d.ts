@@ -30,7 +30,7 @@ export type job_tag_relation = $Result.DefaultSelection<Prisma.$job_tag_relation
 export type tag = $Result.DefaultSelection<Prisma.$tagPayload>
 /**
  * Model user_info
- * 发布岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
+ * 发���岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
  */
 export type user_info = $Result.DefaultSelection<Prisma.$user_infoPayload>
 

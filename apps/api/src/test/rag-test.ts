@@ -1,10 +1,9 @@
 import { ragService } from '../rag/ragService';
 import { jobsPrisma } from '../prisma/client';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 // 加载环境变量
 dotenv.config();
-
 /**
  * 测试RAG服务 - 将PostgreSQL中的岗位数据转换为Pinecone向量
  */
@@ -29,10 +28,29 @@ async function testRagService() {
     }
     
     console.log(`获取到 ${jobs.length} 条岗位数据`);
+
+    console.log('jobs 0：', jobs[0].toString());
     
     // 提取岗位ID
     const jobIds = jobs.map(job => job.topic_id.toString());
     console.log('岗位ID列表:', jobIds);
+
+
+    const testJobId = jobIds[0];
+    console.log(`\n测试检索岗位向量 (ID: ${testJobId})...`);
+    
+    const jobVector = await ragService.getJobVector(testJobId);
+    if (jobVector) {
+      console.log('成功检索到岗位向量:');
+      console.log(`- ID: ${jobVector.id}`);
+      console.log(`- 向量维度: ${jobVector.vector.length}`);
+      console.log('- 元数据:', JSON.stringify(jobVector.metadata, null, 2));
+      console.log('\nRAG服务测试完成......QAQ');
+      return;
+    } else {
+      console.log('未找到岗位向量');
+    }
+
     
     // 处理岗位数据，生成向量
     console.log('开始处理岗位数据，生成向量...');

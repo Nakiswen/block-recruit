@@ -1,7 +1,7 @@
 import { ragService } from '../rag/ragService';
 import { jobsPrisma, resumePrisma } from '../prisma/client';
 import { embeddingService } from '../rag/embeddingService';
-import dotenv from 'dotenv';
+import * as dotenv from 'dotenv';
 
 // 加载环境变量
 dotenv.config();

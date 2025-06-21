@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../apps/api/src/prisma/web3jobs"
+  binaryTargets = ["native", "darwin-arm64", "windows"]
 }
 
 datasource db {

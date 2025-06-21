@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { HfInference } from '@huggingface/inference';
 import { EmbeddingServiceConfig } from './types';
+import dotenv from 'dotenv';
 
 /**
  * 向量嵌入服务
@@ -9,16 +9,11 @@ import { EmbeddingServiceConfig } from './types';
 class EmbeddingService {
   private config: EmbeddingServiceConfig;
   private cache: Map<string, number[]>;
-  private hf: HfInference | null = null;
+  private maxRetries = 3; // 最大重试次数
 
   constructor(config: EmbeddingServiceConfig) {
     this.config = config;
     this.cache = new Map<string, number[]>();
-    
-    // 初始化HuggingFace客户端（如果提供了HF API密钥）
-    if (this.config.hfApiKey) {
-      this.hf = new HfInference(this.config.hfApiKey);
-    }
   }
 
   /**
@@ -153,85 +148,51 @@ class EmbeddingService {
    * @returns 向量数组
    */
   private async callEmbeddingAPI(text: string): Promise<number[]> {
-    try {
-      // 如果使用HuggingFace模型
-      if (this.config.modelName === 'BAAI/bge-large-en-v1.5-icl' && this.hf) {
-        return await this.callHuggingFaceEmbedding(text);
-      }
+    let retries = 0;
+    let lastError: Error | null = null;
 
-      // 如果是智谱AI
-      const apiUrl = this.config.apiKey.includes('sk-zpmodel') 
-        ? 'https://api.zhipuai.cn/v1/embeddings' 
-        : 'https://api.openai.com/v1/embeddings';
-      
-      const response = await axios.post(
-        apiUrl,
-        {
-          model: this.config.modelName,
-          input: text
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.apiKey}`
+    while (retries <= this.maxRetries) {
+      try {
+        // 硅基流动的BAAI/bge-m3 API端点
+        const apiUrl = this.config.embeddingApiUrl;
+        
+        const response = await axios.post(
+          apiUrl,
+          {
+            model: this.config.modelName,
+            input: text
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.config.apiKey}`
+            },
+            // 添加请求超时配置 - 30秒超时时间
+            timeout: 30000,
+            // 添加代理配置（如果需要）
+            proxy: false
           }
-        }
-      );
-      
-      return response.data.data[0].embedding;
-    } catch (error) {
-      console.error('调用Embedding API失败:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 调用HuggingFace Embedding API
-   * @param text 输入文本
-   * @returns 向量数组
-   */
-  private async callHuggingFaceEmbedding(text: string): Promise<number[]> {
-    try {
-      if (!this.hf) {
-        throw new Error('HuggingFace客户端未初始化，请提供有效的HF API密钥');
-      }
-
-      // 调用HuggingFace的feature-extraction接口获取embedding
-      const result = await this.hf.featureExtraction({
-        model: 'BAAI/bge-large-en-v1.5-icl',
-        inputs: text,
-        // ICL提示模板，根据模型文档添加
-        options: {
-          use_pooling: true,
-          wait_for_model: true
-        }
-      });
-
-      // 返回特征向量
-      if (Array.isArray(result)) {
-        // 如果返回的是数组
-        if (result.length > 0 && !Array.isArray(result[0])) {
-          // 如果是一维数组，直接返回
-          return result as number[];
-        } else if (result.length > 0 && Array.isArray(result[0])) {
-          // 如果是二维数组，返回第一个元素
-          return result[0] as number[];
-        }
-      } else if (typeof result === 'object' && result !== null) {
-        // 如果返回的是复杂对象，尝试解析
-        const resultObj = result as Record<string, unknown>;
-        if ('embeddings' in resultObj && Array.isArray(resultObj.embeddings)) {
-          return resultObj.embeddings as number[];
+        );
+        
+        // 解析硅基流动API的响应格式
+        return response.data.data[0].embedding;
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`调用Embedding API失败 (重试 ${retries}/${this.maxRetries}):`, error);
+        retries++;
+        
+        // 如果不是最后一次重试，则等待一段时间后再重试
+        if (retries <= this.maxRetries) {
+          const delay = Math.pow(2, retries) * 1000; // 指数退避策略
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-      
-      // 如果无法正确解析，返回空数组并记录错误
-      console.error('无法解析HuggingFace返回的embedding结果:', result);
-      return [];
-    } catch (error) {
-      console.error('调用HuggingFace Embedding API失败:', error);
-      throw error;
     }
+    
+    // 所有重试都失败了
+    console.error('所有重试都失败，无法获取嵌入向量');
+    throw lastError;
   }
 
   /**
@@ -240,41 +201,53 @@ class EmbeddingService {
    * @returns 向量数组列表
    */
   private async callBatchEmbeddingAPI(texts: string[]): Promise<number[][]> {
-    try {
-      // 如果使用HuggingFace模型，我们需要单独处理每个文本（HF API可能不支持批量）
-      if (this.config.modelName === 'BAAI/bge-large-en-v1.5-icl' && this.hf) {
-        // 并行处理所有文本
-        const promises = texts.map(text => this.callHuggingFaceEmbedding(text));
-        return await Promise.all(promises);
-      }
+    let retries = 0;
+    let lastError: Error | null = null;
 
-      // 否则使用原来的OpenAI或智谱AI的批量API
-      const apiUrl = this.config.apiKey.includes('sk-zpmodel') 
-        ? 'https://api.zhipuai.cn/v1/embeddings' 
-        : 'https://api.openai.com/v1/embeddings';
-      
-      const response = await axios.post(
-        apiUrl,
-        {
-          model: this.config.modelName,
-          input: texts
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.config.apiKey}`
+    while (retries <= this.maxRetries) {
+      try {
+        // 硅基流动的BAAI/bge-m3 API端点
+        const apiUrl = this.config.embeddingApiUrl;
+        
+        const response = await axios.post(
+          apiUrl,
+          {
+            model: this.config.modelName,
+            input: texts
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.config.apiKey}`
+            },
+            // 添加请求超时配置 - 60秒超时时间（批量处理需要更长时间）
+            timeout: 60000,
+            // 添加代理配置（如果需要）
+            proxy: false
           }
+        );
+        
+        // 解析硅基流动API的响应格式，确保按索引排序
+        return response.data.data
+          .sort((a: any, b: any) => a.index - b.index)
+          .map((item: any) => item.embedding);
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`批量调用Embedding API失败 (重试 ${retries}/${this.maxRetries}):`, error);
+        retries++;
+        
+        // 如果不是最后一次重试，则等待一段时间后再重试
+        if (retries <= this.maxRetries) {
+          const delay = Math.pow(2, retries) * 1000; // 指数退避策略
+          console.log(`等待 ${delay}ms 后重试...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-      );
-      
-      // API返回的向量数组可能不是按输入顺序排列的，需要根据index排序
-      return response.data.data
-        .sort((a: any, b: any) => a.index - b.index)
-        .map((item: any) => item.embedding);
-    } catch (error) {
-      console.error('批量调用Embedding API失败:', error);
-      throw error;
+      }
     }
+    
+    // 所有重试都失败了
+    console.error('所有批量重试都失败，无法获取嵌入向量');
+    throw lastError;
   }
 
   /**
@@ -298,11 +271,11 @@ class EmbeddingService {
     // 去除多余空白字符
     let normalized = text.replace(/\s+/g, ' ').trim();
     
-    // 针对BAAI/bge-large-en-v1.5-icl模型，添加特定的文本处理
-    if (this.config.modelName === 'BAAI/bge-large-en-v1.5-icl') {
-      // 对于bge-large-en-v1.5-icl，按照文档建议添加查询前缀
-      if (!normalized.startsWith('Represent this sentence for searching:') && normalized.length < 5000) {
-        normalized = `Represent this sentence for searching: ${normalized}`;
+    // BAAI/bge-m3 模型可能需要特定的文本处理
+    if (this.config.modelName === 'BAAI/bge-m3') {
+      // 根据模型文档添加适当的前缀（如果需要）
+      if (!normalized.startsWith('Represent this sentence:') && normalized.length < 8000) {
+        normalized = `Represent this sentence: ${normalized}`;
       }
     }
     
@@ -316,12 +289,14 @@ class EmbeddingService {
   }
 }
 
+dotenv.config();
+
 // 从环境变量获取配置
 const config: EmbeddingServiceConfig = {
   apiKey: process.env.EMBEDDING_API_KEY || process.env.AI_API_KEY || '',
-  hfApiKey: process.env.HF_API_KEY || process.env.HUGGINGFACE_API_KEY || '',
-  modelName: process.env.EMBEDDING_MODEL || 'BAAI/bge-large-en-v1.5-icl',
-  dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1024', 10) // BGE模型默认是1024维
+  embeddingApiUrl: 'https://api.siliconflow.cn/v1/embeddings',
+  modelName: 'BAAI/bge-m3',
+  dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1024', 10) // BAAI/bge-m3模型默认维度
 };
 
 // 导出服务实例

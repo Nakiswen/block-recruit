@@ -47,8 +47,47 @@ router.post('/upload', jwtAuth, resumesController.uploadResume);
  *                 type: string
  *     responses:
  *       200:
- *         description: 匹配分析结果
+ *         description: 匹配分析，返回匹配的岗位列表数据
  */
 router.post('/match', jwtAuth, resumesController.matchResumeToJob);
+
+/**
+ * @swagger
+ * /resumes/{resumeId}/matching-jobs:
+ *   get:
+ *     summary: 获取简历匹配的岗位列表
+ *     tags:
+ *       - 简历
+ *     parameters:
+ *       - in: path
+ *         name: resumeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: minMatchScore
+ *         schema:
+ *           type: number
+ *       - in: query
+ *         name: location
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: industry
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: educationLevel
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: experienceYears
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 返回匹配的岗位列表数据
+ */
+router.get('/:resumeId/matching-jobs', jwtAuth, resumesController.getMatchingJobsForResume);
 
 export default router; 

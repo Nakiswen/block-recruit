@@ -26,6 +26,7 @@
     "@prisma/client": "^5.22.0",
     "axios": "^1.6.2",
     "bufferutil": "^4.0.9",
+    "langchain": "^0.0.94",
     "lucide-react": "^0.511.0",
     "mastra": "^0.4.9",
     "next": "^13.4.1",

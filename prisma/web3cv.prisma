@@ -4,6 +4,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../apps/api/src/prisma/web3cv"
+  binaryTargets = ["native", "darwin-arm64", "windows"]
 }
 
 datasource db {

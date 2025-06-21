@@ -203,7 +203,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "E:\\workspace\\block-recruit\\apps\\api\\src\\prisma\\web3cv",
+      "value": "/Users/alvinwang/workspace/block-recruit/apps/api/src/prisma/web3cv",
       "fromEnvVar": null
     },
     "config": {
@@ -212,17 +212,25 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "windows",
+        "value": "darwin-arm64",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "darwin-arm64"
+      },
+      {
+        "fromEnvVar": null,
+        "value": "windows"
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "E:\\workspace\\block-recruit\\prisma\\web3cv.prisma",
+    "sourceFilePath": "/Users/alvinwang/workspace/block-recruit/prisma/web3cv.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
     "rootEnvPath": null,
-    "schemaEnvPath": "../../../../../.env"
+    "schemaEnvPath": "../../../.env"
   },
   "relativePath": "../../../../../prisma",
   "clientVersion": "5.22.0",
@@ -240,8 +248,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// 区块链招聘平台核心表结构\n// 版本：v2.0\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../apps/api/src/prisma/web3cv\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"WEB3CV_DATABASE_URL\")\n}\n\n/// 用户表，记录所有注册用户的钱包地址及基础信息\nmodel User {\n  id           String        @id @default(cuid())\n  address      String        @unique // 钱包地址，唯一\n  nickname     String? // 用户昵称\n  email        String? // 邮箱（可选）\n  createdAt    DateTime      @default(now()) // 注册时间\n  updatedAt    DateTime      @updatedAt // 更新时间\n  applications Application[] // 用户的投递记录\n  nftProofs    NFTProof[] // 用户的NFT证明\n  resumes      Resume[] // 用户的简历\n}\n\n/// 岗位表，记录所有招聘岗位信息\nmodel Job {\n  id                 String           @id @default(cuid())\n  title              String // 岗位标题\n  description        String // 原始JD描述\n  jobType            String // 岗位类型\n  weights            Json // 各维度权重\n  parsedRequirements Json // 解析后的结构化要求\n  vectorMetadata     Json? // 向量元数据（维度信息等）\n  createdAt          DateTime         @default(now())\n  updatedAt          DateTime         @updatedAt\n  resumeAnalyses     ResumeAnalysis[] // 关联的简历分析\n  applications       Application[] // 关联的投递记录\n}\n\n/// 简历表，记录用户上传的简历\nmodel Resume {\n  id            String   @id @default(cuid())\n  userId        String\n  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n  content       String // 原始简历内容\n  parsedContent Json? // 解析后的结构化内容\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @updatedAt\n}\n\n/// 简历分析表，记录简历与岗位的匹配分析结果\nmodel ResumeAnalysis {\n  id              String   @id @default(cuid())\n  jobId           String\n  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)\n  resumeContent   String // 原始简历内容\n  parsedResume    Json // 解析后的结构化简历数据\n  totalScore      Float // 总评分\n  skillScore      Float // 技能匹配分\n  experienceScore Float // 经验匹配分\n  matchingPoints  Json // 匹配要点\n  suggestions     Json // 改进建议\n  recommended     Boolean // 是否推荐\n  createdAt       DateTime @default(now())\n  updatedAt       DateTime @updatedAt\n}\n\n/// 投递记录表，记录用户对岗位的投递行为\nmodel Application {\n  id        String   @id @default(cuid())\n  userId    String\n  user      User     @relation(fields: [userId], references: [id])\n  jobId     String\n  job       Job      @relation(fields: [jobId], references: [id])\n  status    String // 投递状态，如 pending, accepted, rejected\n  createdAt DateTime @default(now())\n}\n\n/// NFT证明表，记录用户的链上成就/组织等证明\nmodel NFTProof {\n  id       String   @id @default(cuid())\n  userId   String\n  user     User     @relation(fields: [userId], references: [id])\n  nftType  String // 成就/组织等类型\n  tokenId  String // 链上TokenId\n  txHash   String // 链上交易哈希\n  mintedAt DateTime // 铸造时间\n}\n",
-  "inlineSchemaHash": "56c62d3e3da478547604a0112c3cad5877c859070b697a4392fe7bc798c9379c",
+  "inlineSchema": "// 区块链招聘平台核心表结构\n// 版本：v2.0\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../apps/api/src/prisma/web3cv\"\n  binaryTargets = [\"native\", \"darwin-arm64\", \"windows\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"WEB3CV_DATABASE_URL\")\n}\n\n/// 用户表，记录所有注册用户的钱包地址及基础信息\nmodel User {\n  id           String        @id @default(cuid())\n  address      String        @unique // 钱包地址，唯一\n  nickname     String? // 用户昵称\n  email        String? // 邮箱（可选）\n  createdAt    DateTime      @default(now()) // 注册时间\n  updatedAt    DateTime      @updatedAt // 更新时间\n  applications Application[] // 用户的投递记录\n  nftProofs    NFTProof[] // 用户的NFT证明\n  resumes      Resume[] // 用户的简历\n}\n\n/// 岗位表，记录所有招聘岗位信息\nmodel Job {\n  id                 String           @id @default(cuid())\n  title              String // 岗位标题\n  description        String // 原始JD描述\n  jobType            String // 岗位类型\n  weights            Json // 各维度权重\n  parsedRequirements Json // 解析后的结构化要求\n  vectorMetadata     Json? // 向量元数据（维度信息等）\n  createdAt          DateTime         @default(now())\n  updatedAt          DateTime         @updatedAt\n  resumeAnalyses     ResumeAnalysis[] // 关联的简历分析\n  applications       Application[] // 关联的投递记录\n}\n\n/// 简历表，记录用户上传的简历\nmodel Resume {\n  id            String   @id @default(cuid())\n  userId        String\n  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n  content       String // 原始简历内容\n  parsedContent Json? // 解析后的结构化内容\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @updatedAt\n}\n\n/// 简历分析表，记录简历与岗位的匹配分析结果\nmodel ResumeAnalysis {\n  id              String   @id @default(cuid())\n  jobId           String\n  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)\n  resumeContent   String // 原始简历内容\n  parsedResume    Json // 解析后的结构化简历数据\n  totalScore      Float // 总评分\n  skillScore      Float // 技能匹配分\n  experienceScore Float // 经验匹配分\n  matchingPoints  Json // 匹配要点\n  suggestions     Json // 改进建议\n  recommended     Boolean // 是否推荐\n  createdAt       DateTime @default(now())\n  updatedAt       DateTime @updatedAt\n}\n\n/// 投递记录表，记录用户对岗位的投递行为\nmodel Application {\n  id        String   @id @default(cuid())\n  userId    String\n  user      User     @relation(fields: [userId], references: [id])\n  jobId     String\n  job       Job      @relation(fields: [jobId], references: [id])\n  status    String // 投递状态，如 pending, accepted, rejected\n  createdAt DateTime @default(now())\n}\n\n/// NFT证明表，记录用户的链上成就/组织等证明\nmodel NFTProof {\n  id       String   @id @default(cuid())\n  userId   String\n  user     User     @relation(fields: [userId], references: [id])\n  nftType  String // 成就/组织等类型\n  tokenId  String // 链上TokenId\n  txHash   String // 链上交易哈希\n  mintedAt DateTime // 铸造时间\n}\n",
+  "inlineSchemaHash": "50aac77f88569959decc82209fd0e4dffb4aa24eb11f596c1dd2e4619e8c0a7a",
   "copyEngine": true
 }
 
@@ -250,8 +258,8 @@ const fs = require('fs')
 config.dirname = __dirname
 if (!fs.existsSync(path.join(__dirname, 'schema.prisma'))) {
   const alternativePaths = [
-    "apps/api/src/prisma/web3cv",
-    "api/src/prisma/web3cv",
+    "src/prisma/web3cv",
+    "prisma/web3cv",
   ]
   
   const alternativePath = alternativePaths.find((altPath) => {
@@ -279,8 +287,12 @@ exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
 
 // file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
+path.join(process.cwd(), "src/prisma/web3cv/libquery_engine-darwin-arm64.dylib.node")
+
+// file annotations for bundling tools to include these files
 path.join(__dirname, "query_engine-windows.dll.node");
-path.join(process.cwd(), "apps/api/src/prisma/web3cv/query_engine-windows.dll.node")
+path.join(process.cwd(), "src/prisma/web3cv/query_engine-windows.dll.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
-path.join(process.cwd(), "apps/api/src/prisma/web3cv/schema.prisma")
+path.join(process.cwd(), "src/prisma/web3cv/schema.prisma")

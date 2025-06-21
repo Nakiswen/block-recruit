@@ -1,41 +1,9 @@
 import { PineconeClient } from './pineconeClient';
 import { embeddingService } from './embeddingService';
 import { SearchOptions, SearchResult, PineconeIndexType } from './types';
-import { jobsPrisma, resumePrisma } from '../prisma/client';
-
-// 定义模型类型
-type Job = {
-  id: string;
-  title: string;
-  description: string;
-  companyName?: string; // 可能不存在，添加可选标志
-  salaryRange?: string; // 可能不存在，添加可选标志
-  location?: string;    // 可能不存在，添加可选标志
-  responsibilities?: string;
-  requirements?: string;
-  skills?: string[];
-  industry?: string;
-  experienceYears?: number;
-  educationLevel?: string;
-  level?: string;
-};
-
-type Resume = {
-  id: string;
-  userId: string;
-  name?: string;
-  content: string;
-  parsedContent?: any;
-  skills?: string[];
-  experienceYears?: number;
-  educationLevel?: string;
-  industry?: string;
-  location?: string;
-  summary?: string;
-  workExperience?: string;
-  projects?: string;
-  education?: string;
-};
+import { jobsPrisma, resumePrisma } from '@/prisma/client';
+import { aiService } from '@/ai/aiService';
+import { Job, Resume } from './types';
 
 // Pinecone搜索结果类型
 type PineconeSearchResult = {
@@ -388,14 +356,30 @@ export const ragService = {
     industry: string;
     jobLevel: string;
   }> {
-    // 这里应该调用AI服务，但目前简单返回默认值和已有数据
+    // 通过AI服务从job中提取结构化信息
+    // 构造AI服务需要的Job对象，补全必需字段
+    const aiJob = {
+      id: job.id,
+      title: job.title,
+      description: job.description,
+      companyName: job.companyName || '',
+      responsibilities: job.responsibilities || '',
+      requirements: job.requirements || '',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      jobType: '',
+      weights: {},
+      parsedRequirements: {},
+      vectorMetadata: {}
+    };
+    const aiResult = await aiService.extractJobInfo(aiJob);
     return {
-      requiredSkills: job.skills || [],
-      preferredSkills: [],
-      experienceYears: job.experienceYears || 0,
-      educationLevel: job.educationLevel || '',
-      industry: job.industry || '',
-      jobLevel: job.level || '初级'
+      requiredSkills: aiResult.requiredSkills,
+      preferredSkills: aiResult.preferredSkills,
+      experienceYears: aiResult.experienceYears,
+      educationLevel: aiResult.educationLevel,
+      industry: aiResult.industry,
+      jobLevel: aiResult.jobLevel
     };
   },
 
@@ -411,13 +395,26 @@ export const ragService = {
     industryExperience: string[];
     location: string;
   }> {
-    // 这里应该调用AI服务，但目前简单返回默认值和已有数据
-    return {
+    // 通过AI服务从简历中提取结构化信息
+    // 构造AI服务需要的Resume对象，补全必需字段
+    const aiResume = {
+      id: resume.id,
+      userId: resume.userId,
+      content: resume.content,
+      parsedContent: resume.parsedContent || undefined,
       skills: resume.skills || [],
       experienceYears: resume.experienceYears || 0,
       educationLevel: resume.educationLevel || '',
-      industryExperience: [resume.industry || ''].filter(Boolean),
+      industry: resume.industry || '',
       location: resume.location || ''
+    };
+    const aiResult = await aiService.extractResumeInfo(aiResume);
+    return {
+      skills: aiResult.skills || [],
+      experienceYears: aiResult.experienceYears || 0,
+      educationLevel: aiResult.educationLevel || '',
+      industryExperience: aiResult.industryExperience || [],
+      location: aiResult.location || ''
     };
   },
 

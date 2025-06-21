@@ -75,7 +75,42 @@ export interface PineconeSearchParams {
  */
 export interface EmbeddingServiceConfig {
   apiKey: string;
-  hfApiKey?: string;
+  embeddingApiUrl: string;
   modelName: string;
   dimensions: number;
 }
+
+
+// 定义模型类型
+export type Job = {
+  id: string;
+  title: string;
+  description: string;
+  companyName?: string; // 可能不存在，添加可选标志
+  salaryRange?: string; // 可能不存在，添加可选标志
+  location?: string;    // 可能不存在，添加可选标志
+  responsibilities?: string;
+  requirements?: string;
+  skills?: string[];
+  industry?: string;
+  experienceYears?: number;
+  educationLevel?: string;
+  level?: string;
+};
+
+export type Resume = {
+  id: string;
+  userId: string;
+  name?: string;
+  content: string;
+  parsedContent?: any;
+  skills?: string[];
+  experienceYears?: number;
+  educationLevel?: string;
+  industry?: string;
+  location?: string;
+  summary?: string;
+  workExperience?: string;
+  projects?: string;
+  education?: string;
+};
