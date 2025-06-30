@@ -16,4 +16,4 @@ export async function getCurrentUser(ctx: Context): Promise<void> {
     ctx.status = 500;
     ctx.body = { error: '获取用户信息失败', detail: (error as Error).message };
   }
-} 
+}

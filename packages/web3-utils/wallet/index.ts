@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import axios from 'axios';
 
 export interface ConnectWalletResult {
   address: string;
@@ -9,6 +10,11 @@ export interface ConnectWalletResult {
 
 // 存储签名
 let _authSignature: string | null = null;
+// 存储JWT令牌
+let _authToken: string | null = null;
+
+// API基础URL - 使用相对路径，让浏览器自动处理
+const API_BASE_PATH = '/api';
 
 /**
  * 连接以太坊钱包（MetaMask或其他浏览器钱包）
@@ -68,9 +74,23 @@ export async function connectWallet(): Promise<ConnectWalletResult> {
  */
 export async function getWalletSignature(address: string, provider?: any): Promise<string> {
   try {
-    // 如果已经有签名且有效，则返回缓存的签名
-    if (_authSignature) {
-      return _authSignature;
+    // 首先检查是否有有效的JWT令牌
+    let token = localStorage.getItem('token');
+    if (token) {
+      try {
+        // 验证令牌是否有效
+        const response = await axios.get(`${API_BASE_PATH}/auth/session`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (response.data.isValid) {
+          console.log('现有令牌有效，无需重新签名');
+          _authToken = token;
+          return token; // 返回令牌作为"签名"
+        }
+      } catch (error) {
+        console.warn('验证令牌失败，将重新获取签名', error);
+      }
     }
 
     if (!provider && typeof window !== 'undefined' && window.ethereum) {
@@ -84,23 +104,81 @@ export async function getWalletSignature(address: string, provider?: any): Promi
     // 获取签名者
     const signer = await provider.getSigner(address);
     
-    // 准备消息
-    const timestamp = Date.now();
-    const message = `BlockRecruit 身份验证\n地址: ${address}\n时间戳: ${timestamp}`;
-
-    // 获取签名
-    const signature = await signer.signMessage(message);
+    // 步骤1: 请求登录挑战
+    console.log('请求登录挑战...');
+    const challengeResponse = await axios.get(`${API_BASE_PATH}/auth/challenge`, {
+      params: { address }
+    });
     
-    // 存储签名
-    _authSignature = signature;
-    localStorage.setItem('walletAuth', signature);
-    localStorage.setItem('walletAuthTimestamp', timestamp.toString());
-    localStorage.setItem('walletAuthAddress', address);
-
-    return signature;
+    const { message, nonce } = challengeResponse.data;
+    
+    if (!message || !nonce) {
+      throw new Error('登录挑战数据不完整');
+    }
+    
+    console.log('需要签名的消息:', message);
+    
+    // 步骤2: 请求用户签名
+    console.log('请求用户签名...');
+    const signature = await signer.signMessage(message);
+    console.log('获取签名成功');
+    
+    // 保存签名数据以便将来静默登录
+    localStorage.setItem(`message_${address.toLowerCase()}`, message);
+    localStorage.setItem(`signature_${address.toLowerCase()}`, signature);
+    localStorage.setItem(`nonce_${address.toLowerCase()}`, nonce);
+    
+    // 步骤3: 验证签名并登录
+    console.log('提交登录验证...');
+    
+    const loginResponse = await axios.post(`${API_BASE_PATH}/auth/login`, {
+      address,
+      signature,
+      nonce
+    });
+    
+    const { token: newToken } = loginResponse.data;
+    token = newToken;
+    console.log('登录成功，获取到token');
+    
+    // 保存token到localStorage
+    if (token) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('walletAuth', 'true');
+      localStorage.setItem('walletAuthAddress', address);
+      _authToken = token;
+      
+      return token; // 返回令牌
+    } else {
+      throw new Error('登录失败，未获取到token');
+    }
   } catch (error) {
     console.error('获取钱包签名失败:', error);
     throw error;
+  }
+}
+
+/**
+ * 验证会话是否有效
+ * @returns 会话是否有效
+ */
+export async function verifySession(): Promise<boolean> {
+  try {
+    // 检查是否有令牌
+    const token = localStorage.getItem('token');
+    if (!token) {
+      return false;
+    }
+    
+    // 验证令牌
+    const response = await axios.get(`${API_BASE_PATH}/auth/session`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    return response.data.isValid === true;
+  } catch (error) {
+    console.error('验证会话失败:', error);
+    return false;
   }
 }
 
@@ -109,20 +187,20 @@ export async function getWalletSignature(address: string, provider?: any): Promi
  * @returns 包含认证头的对象或空对象（如果未连接）
  */
 export function getAuthHeaders(): Record<string, string> {
-  // 首先尝试从内存中获取
-  let signature = _authSignature;
+  // 首先尝试从内存中获取JWT令牌
+  let token = _authToken;
   
   // 如果内存中没有，尝试从localStorage获取
-  if (!signature && typeof window !== 'undefined') {
-    signature = localStorage.getItem('walletAuth');
+  if (!token && typeof window !== 'undefined') {
+    token = localStorage.getItem('token');
   }
   
-  if (!signature) {
+  if (!token) {
     return {};
   }
   
   return {
-    'Authorization': `Bearer ${signature}`
+    'Authorization': `Bearer ${token}`
   };
 }
 
@@ -152,12 +230,52 @@ export function listenChainChanges(callback: (chainId: string) => void): void {
 export function disconnectWallet(): void {
   // 清除应用中的钱包状态
   _authSignature = null;
+  _authToken = null;
   if (typeof window !== 'undefined') {
+    localStorage.removeItem('token');
     localStorage.removeItem('walletAuth');
-    localStorage.removeItem('walletAuthTimestamp');
     localStorage.removeItem('walletAuthAddress');
+    
+    // 清除所有保存的签名数据
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      if (key.startsWith('signature_') || key.startsWith('message_') || key.startsWith('nonce_')) {
+        localStorage.removeItem(key);
+      }
+    }
   }
   console.log('钱包已断开连接');
+}
+
+/**
+ * 检查钱包是否已连接（不会触发连接请求）
+ * @returns 是否已连接
+ */
+export async function isWalletConnected(): Promise<boolean> {
+  try {
+    // 首先检查localStorage
+    if (typeof window === 'undefined' || localStorage.getItem('walletAuth') !== 'true') {
+      return false;
+    }
+    
+    // 然后验证会话
+    const sessionValid = await verifySession();
+    if (sessionValid) {
+      return true;
+    }
+    
+    // 最后检查钱包连接
+    if (!window.ethereum) {
+      return false;
+    }
+    
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_accounts', []);
+    return accounts && accounts.length > 0;
+  } catch (error) {
+    console.error('检查钱包连接状态失败:', error);
+    return false;
+  }
 }
 
 // 添加全局类型声明

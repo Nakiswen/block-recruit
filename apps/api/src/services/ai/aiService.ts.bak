@@ -25,6 +25,14 @@ interface AIService {
   
   // 根据简历和岗位计算匹配度评分
   calculateMatchScore(resumeInfo: ResumeStructuredInfo, jobInfo: JobStructuredInfo): Promise<MatchResult>;
+
+  /**
+   * 对简历和岗位进行增强匹配分析
+   * @param resume 简历数据
+   * @param job 岗位数据
+   * @returns 完整的匹配分析结果
+   */
+  enhanceMatching(resume: Resume, job: Job): Promise<MatchResult>;
 }
 
 /**
@@ -70,7 +78,15 @@ class LangChainAIService implements AIService {
   private model: ChatOpenAI;
   private config: AIServiceConfig;
 
+  /**
+   * 构造函数
+   * @param config AI服务配置
+   */
   constructor(config: AIServiceConfig) {
+    // 在初始化时检查API Key是否存在，如果不存在则抛出错误，防止服务在不可用状态下运行
+    if (!config.apiKey) {
+      throw new Error("AI Service API key is not configured. Please set the corresponding environment variable (e.g., OPENROUTER_API_KEY).");
+    }
     this.config = config;
     this.model = new ChatOpenAI({
       modelName: config.model,
@@ -223,6 +239,7 @@ class LangChainAIService implements AIService {
 
       // 调用AI模型
       const response = await this.model.invoke(formattedPrompt);
+      console.log("🚀 ~ LangChainAIService ~ extractResumeInfo ~ response:", response)
       
       // 解析返回结果
       const content = typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
@@ -317,6 +334,32 @@ class LangChainAIService implements AIService {
   }
 
   /**
+   * 对单个简历和岗位对执行完整的AI增强匹配分析。
+   * 这个方法封装了信息提取和评分计算的整个流程，简化了外部服务的调用。
+   * @param resume 简历数据
+   * @param job 岗位数据
+   * @returns 匹配结果，包含评分、技能分析、原因和建议
+   */
+  async enhanceMatching(resume: Resume, job: Job): Promise<MatchResult> {
+    try {
+      // 并行执行简历和岗位信息的提取，以提高效率
+      const [resumeInfo, jobInfo] = await Promise.all([
+        this.extractResumeInfo(resume),
+        this.extractJobInfo(job)
+      ]);
+
+      // 使用提取出的结构化信息计算匹配分数和详细分析
+      const matchResult = await this.calculateMatchScore(resumeInfo, jobInfo);
+
+      return matchResult;
+    } catch (error) {
+        console.error(`为简历 ${resume.id} 和岗位 ${job.id} 执行增强匹配失败:`, error);
+        // 在遇到错误时，将错误包装后重新抛出，以便上层服务能够捕获和处理
+        throw new Error(`Failed to enhance match for resume ${resume.id} and job ${job.id}: ${(error as Error).message}`);
+    }
+  }
+
+  /**
    * 规范化岗位信息
    * @param jobInfo 原始岗位信息
    * @returns 规范化后的岗位信息
@@ -359,10 +402,11 @@ class LangChainAIService implements AIService {
   private normalizeSkills(skills: string[]): string[] {
     if (!skills || !Array.isArray(skills)) return [];
     
-    return skills
+    // 过滤掉无效或空字符串，并进行修剪和转换为小写，确保技能匹配的一致性
+    return [...new Set(skills
       .filter(Boolean)
-      .map(skill => skill.trim())
-      .filter(skill => skill.length > 0);
+      .map(skill => skill.trim().toLowerCase()) 
+      .filter(skill => skill.length > 0))];
   }
 
   /**
@@ -409,7 +453,7 @@ class LangChainAIService implements AIService {
 // 从环境变量获取配置
 const config: AIServiceConfig = {
   apiKey: process.env.OPENROUTER_API_KEY || '',
-  model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4',
+  model: process.env.AI_MODEL || 'anthropic/claude-3-sonnet',
   baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1'
 };
 

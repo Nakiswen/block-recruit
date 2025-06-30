@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from 'ui';
 import Link from 'next/link';
 import Image from 'next/image';
+import { jobServices, resumeServices, nftServices, Job, NFTAchievement, applicationServices, userServices } from '../lib/api';
+import api from '../lib/api';
 
 // 定义NFT类型
 interface NFT {
@@ -14,54 +16,8 @@ interface NFT {
   type: string;
   verifiedBy: string;
   icon: string;
-  bgColor?: string; // 添加可选的背景色属性
+  bgColor?: string;
 }
-
-const MOCK_JOBS = [
-  {
-    id: 'job-1',
-    title: '高级智能合约开发工程师',
-    company: 'BlockChain Tech',
-    location: '远程',
-    salary: '30-50k/月',
-    matchScore: 89,
-    description: '设计和开发基于EVM生态的去中心化应用智能合约，使用Solidity编写高效、安全的智能合约，实现和优化核心功能包括资产管理、交易执行和安全验证，协调与团队其他成员的工作，研究应用最新区块链技术和行业最佳实践。',
-    requirements: ['计算机科学相关学位', '2年以上区块链开发经验', '精通Solidity智能合约开发', '熟悉区块链基础架构和共识算法', '有DeFi或NFT项目实战经验']
-  },
-  {
-    id: 'job-2',
-    title: '智能合约开发工程师',
-    company: 'MetaDAO',
-    location: '远程/北京',
-    salary: '25-35k/月',
-    matchScore: 78,
-    description: '设计和开发基于Solana或EVM生态的去中心化应用智能合约，使用Solidity编写高效、安全的智能合约，实现和优化核心功能包括资产管理、交易执行和安全验证，协调与团队其他成员的工作，研究应用最新区块链技术和行业最佳实践。',
-    requirements: ['计算机科学相关学位', '2年以上区块链开发经验', '精通Solidity智能合约开发', '熟悉区块链基础架构和共识算法', '良好的沟通能力和团队合作精神']
-  },
-  {
-    id: 'job-3',
-    title: '资深智能合约开发工程师',
-    company: 'CryptoSafe',
-    location: '远程/上海',
-    salary: '35-60k/月',
-    matchScore: 65,
-    description: '设计和开发基于EVM生态的去中心化应用智能合约，针对我们的多链资产管理平台进行智能合约开发，使用Solidity编写高效、安全的智能合约，实现和优化核心功能，研究应用最新区块链技术和行业最佳实践，确保产品安全与高效。',
-    requirements: ['计算机科学相关学位', '3年以上区块链开发经验', '精通Solidity智能合约开发', '熟悉区块链基础架构和共识算法', '对区块链技术和行业发展充满热情']
-  },
-];
-
-// 模拟GitHub成就数据
-const MOCK_GITHUB_ACHIEVEMENTS = [
-  { id: 1, name: 'Pull Shark', description: '提交了多个被接受的PR', icon: '🦈' },
-  { id: 2, name: 'Galaxy Brain', description: '多次解答社区问题', icon: '🧠' },
-  { id: 3, name: 'YOLO', description: '不经审核直接合并代码', icon: '🔥' },
-];
-
-// 模拟用户组织数据
-const MOCK_GITHUB_ORGANIZATIONS = [
-  { id: 1, name: 'Ethereum', icon: 'Ξ', bgColor: 'bg-indigo-600' },
-  { id: 2, name: 'OpenZeppelin', icon: 'OZ', bgColor: 'bg-purple-600' },
-];
 
 // 产品功能列表
 const PRODUCT_FEATURES = [
@@ -147,52 +103,122 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [matchingProgress, setMatchingProgress] = useState(0);
-  const [matchedJobs, setMatchedJobs] = useState<any[]>([]);
+  const [matchedJobs, setMatchedJobs] = useState<Job[]>([]);
   const [userNFTs, setUserNFTs] = useState<NFT[]>([]);
   const [activePage, setActivePage] = useState('home');
   const [activeSection, setActiveSection] = useState('');
   const [expandedState, setExpandedState] = useState<Record<string, boolean>>({});
   const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
   const [matchingStarted, setMatchingStarted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // 处理钱包连接
+  // 获取用户NFT证明
+  const fetchUserNFTs = useCallback(async (userId: string) => {
+    try {
+      const nftsData = await nftServices.getUserNfts(userId);
+      if (nftsData && Array.isArray(nftsData)) {
+        setUserNFTs(nftsData);
+      }
+    } catch (error) {
+      console.error('获取用户NFT失败:', error);
+    }
+  }, []);
+  
+  // 获取用户信息
+  const fetchUserInfo = useCallback(async () => {
+    try {
+      const userData = await userServices.getCurrentUser();
+      setCurrentUser(userData);
+      
+      // 如果用户有NFT证明，获取用户NFT
+      if (userData && userData.id) {
+        fetchUserNFTs(userData.id);
+      }
+    } catch (error) {
+      console.warn('获取用户信息失败 (可能API未启动或未登录):', error);
+      // 静默失败，不影响用户体验
+    }
+  }, [fetchUserNFTs]);
+  
   useEffect(() => {
-    // 检查本地存储的钱包连接状态
+    if (resumeUploaded && matchingStarted && matchingProgress < 100) {
+      setIsLoading(true);
+      
+      // 如果有resumeId，则获取匹配的岗位
+      if (resumeId) {
+        const timer = setTimeout(async () => {
+          try {
+            // 显示进度
+            setMatchingProgress(50);
+            
+            // 调用匹配API
+            const matchResult = await resumeServices.matchResume();
+            setMatchingProgress(80);
+            
+            // 获取匹配的岗位列表
+            const matchedJobsData = await resumeServices.getMatchingJobs(resumeId);
+            setMatchedJobs(matchedJobsData);
+            setMatchingProgress(100);
+          } catch (error) {
+            console.error('获取匹配岗位失败:', error);
+            setUploadError('岗位匹配过程中出现错误，请重试');
+          } finally {
+            setIsLoading(false);
+          }
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+      } else {
+        // 没有resumeId，无法匹配
+        setMatchingProgress(100);
+        setUploadError('未找到简历ID，无法进行匹配');
+        setIsLoading(false);
+      }
+    }
+  }, [resumeUploaded, matchingStarted, resumeId, matchingProgress]);
+  
+  // 修复useEffect依赖问题
+  useEffect(() => {
+    // 检查本地存储的钱包连接状态 - 仅读取状态，不发起连接
     const walletConnected = localStorage.getItem('walletAuth') === 'true';
     setIsWalletConnected(walletConnected);
     
-    // 检查是否有已上传简历的标志 - 不再自动设置resumeUploaded
+    // 检查是否有已上传简历的标志
     const hasUploadedResume = localStorage.getItem('resumeUploaded') === 'true';
     if (hasUploadedResume) {
       setResumeUploaded(true);
+      
+      // 获取resumeId
+      const storedResumeId = localStorage.getItem('resumeId');
+      if (storedResumeId) {
+        setResumeId(storedResumeId);
+      }
     }
     
-    // 如果有简历上传，则生成NFT数据
-    if (hasUploadedResume) {
-      // 生成NFT数据
-      const nfts = MOCK_GITHUB_ACHIEVEMENTS.map(achievement => ({
-        id: `nft-${achievement.id}`,
-        title: achievement.name,
-        description: achievement.description,
-        image: achievement.icon,
-        type: 'achievement',
-        verifiedBy: 'GitHub',
-        icon: achievement.icon
-      }));
-      
-      MOCK_GITHUB_ORGANIZATIONS.forEach(org => {
-        nfts.push({
-          id: `nft-org-${org.id}`,
-          title: `${org.name} 组织成员`,
-          description: `验证为 ${org.name} 组织的成员资格`,
-          image: org.icon,
-          type: 'organization',
-          verifiedBy: 'GitHub',
-          icon: org.icon
-        });
-      });
-      
-      setUserNFTs(nfts);
+    // 不再自动获取用户信息，只在用户明确请求时获取
+    
+    // 监听以太坊钱包账户变化
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        // 用户断开钱包连接
+        localStorage.removeItem('token');
+        localStorage.removeItem('walletAuth');
+        localStorage.removeItem('walletAuthAddress');
+        setIsWalletConnected(false);
+        setCurrentUser(null);
+      } else {
+        // 用户切换了账户，使用新地址重新登录
+        const newAddress = accounts[0];
+        localStorage.setItem('walletAuthAddress', newAddress);
+        // 这里可以选择自动重新登录或提示用户重新登录
+      }
+    };
+
+    // 添加以太坊钱包事件监听
+    if (typeof window.ethereum !== 'undefined') {
+      (window.ethereum as any).on('accountsChanged', handleAccountsChanged);
     }
 
     // 监听localStorage变化，确保顶部导航栏和首页状态同步
@@ -200,9 +226,18 @@ export default function Home() {
       if (e.key === 'walletAuth') {
         const walletConnected = e.newValue === 'true';
         setIsWalletConnected(walletConnected);
+        if (walletConnected) {
+          // 钱包已连接，但不自动获取用户信息
+          // 用户可以通过点击相关按钮来获取信息
+        } else {
+          setCurrentUser(null);
+        }
       } else if (e.key === 'resumeUploaded') {
         const resumeUploaded = e.newValue === 'true';
         setResumeUploaded(resumeUploaded);
+      } else if (e.key === 'resumeId') {
+        const resumeId = e.newValue;
+        setResumeId(resumeId);
       }
     };
 
@@ -211,6 +246,11 @@ export default function Home() {
       const detail = (e as CustomEvent).detail;
       if (detail && detail.connected !== undefined) {
         setIsWalletConnected(detail.connected);
+        if (detail.connected) {
+          // 钱包已连接，但不自动获取用户信息
+        } else {
+          setCurrentUser(null);
+        }
       }
     };
     
@@ -218,6 +258,9 @@ export default function Home() {
       const detail = (e as CustomEvent).detail;
       if (detail && detail.uploaded !== undefined) {
         setResumeUploaded(detail.uploaded);
+        if (detail.resumeId) {
+          setResumeId(detail.resumeId);
+        }
       }
     };
 
@@ -251,26 +294,13 @@ export default function Home() {
       document.removeEventListener('walletConnected', handleWalletEvent);
       document.removeEventListener('resumeUploaded', handleResumeEvent);
       window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-  
-  // 模拟匹配过程 - 仅在matchingStarted为true时开始匹配
-  useEffect(() => {
-    if (resumeUploaded && matchingStarted && matchingProgress < 100) {
-      const timer = setTimeout(() => {
-        setMatchingProgress(prev => {
-          const newProgress = prev + 10;
-          if (newProgress >= 100) {
-            // 匹配完成，加载推荐岗位
-            setMatchedJobs(MOCK_JOBS);
-          }
-          return Math.min(newProgress, 100);
-        });
-      }, 500);
       
-      return () => clearTimeout(timer);
-    }
-  }, [resumeUploaded, matchingProgress, matchingStarted]);
+      // 移除以太坊钱包事件监听
+      if (typeof window.ethereum !== 'undefined') {
+        (window.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
+      }
+    };
+  }, []);  // 移除fetchUserInfo依赖，避免自动调用
   
   // 处理简历文件选择
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -306,10 +336,16 @@ export default function Home() {
     setIsUploading(true);
     
     try {
-      // 这里模拟文件上传过程
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 调用API上传简历
+      const response = await resumeServices.uploadResume(resumeFile);
       
-      // 模拟上传成功
+      // 保存resumeId
+      if (response && response.id) {
+        setResumeId(response.id);
+        localStorage.setItem('resumeId', response.id);
+      }
+      
+      // 上传成功
       setResumeUploaded(true);
       setIsUploading(false);
       
@@ -321,11 +357,12 @@ export default function Home() {
       
       // 触发自定义事件
       const event = new CustomEvent('resumeUploaded', { 
-        detail: { uploaded: true } 
+        detail: { uploaded: true, resumeId: response?.id } 
       });
       document.dispatchEvent(event);
       
     } catch (error) {
+      console.error('简历上传失败:', error);
       setUploadError("上传失败，请重试");
       setIsUploading(false);
     }
@@ -333,17 +370,35 @@ export default function Home() {
   
   // 处理岗位申请
   const handleApplyJob = useCallback((jobId: string) => {
-    console.log(`应聘岗位: ${jobId}，附带NFT证明`);
-    // 设置申请成功状态
-    setAppliedJobId(jobId);
+    // 如果没有用户ID或jobId，则无法申请
+    if (!currentUser || !currentUser.id || !jobId) {
+      setUploadError("请先登录或选择有效的岗位");
+      return;
+    }
     
-    // 2秒后清除提示
-    setTimeout(() => {
-      setAppliedJobId(null);
-    }, 3000);
+    // 调用API创建投递记录
+    const applyJob = async () => {
+      try {
+        await applicationServices.createApplication({
+          userId: currentUser.id,
+          jobId: jobId
+        });
+        
+        // 设置申请成功状态
+        setAppliedJobId(jobId);
+        
+        // 2秒后清除提示
+        setTimeout(() => {
+          setAppliedJobId(null);
+        }, 3000);
+      } catch (error) {
+        console.error('岗位申请失败:', error);
+        setUploadError("岗位申请失败，请重试");
+      }
+    };
     
-    // 这里可以实现申请岗位的逻辑
-  }, []);
+    applyJob();
+  }, [currentUser]);
 
   // 滚动到指定部分
   const scrollToSection = (sectionId: string) => {
@@ -360,6 +415,94 @@ export default function Home() {
       [jobId]: !prev[jobId]
     }));
   };
+  
+  // 处理钱包连接 - 只在用户明确点击时发起连接
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      // 检查是否存在以太坊提供程序
+      if (typeof window.ethereum === 'undefined') {
+        setUploadError('未检测到以太坊钱包，请安装MetaMask或其他Web3钱包');
+        return;
+      }
+      
+      // 请求连接钱包
+      const accounts = await (window.ethereum as any).request({ 
+        method: 'eth_requestAccounts' 
+      });
+      
+      if (!accounts || accounts.length === 0) {
+        setUploadError('未能获取钱包地址');
+        return;
+      }
+      
+      // 获取实际钱包地址
+      const address = accounts[0];
+      
+      // 步骤1: 请求登录挑战
+      const challengeResponse = await api.get(`/auth/challenge`, {
+        params: { address }
+      });
+      
+      const { message, nonce } = challengeResponse.data;
+      
+      if (!message || !nonce) {
+        setUploadError('登录挑战数据不完整');
+        return;
+      }
+      
+      console.log('需要签名的消息:', message);
+      
+      // 步骤2: 请求用户签名
+      const signature = await (window.ethereum as any).request({
+        method: 'personal_sign',
+        params: [message, address]
+      });
+      
+      // 步骤3: 验证签名并登录
+      const loginResponse = await api.post('/auth/login', {
+        address,
+        signature,
+        nonce
+      });
+      
+      const { token } = loginResponse.data;
+      
+      // 保存token到localStorage
+      if (token) {
+        localStorage.setItem('token', token);
+        localStorage.setItem('walletAuth', 'true');
+        localStorage.setItem('walletAuthAddress', address);
+        
+        setIsWalletConnected(true);
+        
+        // 触发自定义事件通知状态变化
+        const event = new CustomEvent('walletConnected', { 
+          detail: { connected: true } 
+        });
+        document.dispatchEvent(event);
+        
+        // 触发storage事件
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'walletAuth',
+          newValue: 'true'
+        }));
+      } else {
+        setUploadError('登录失败，未获取到token');
+      }
+    } catch (error) {
+      console.error('钱包连接失败:', error);
+      setUploadError(`钱包连接或登录失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }, []);
+
+  // 获取用户信息 - 只在用户明确请求时调用
+  const handleGetUserInfo = useCallback(async () => {
+    try {
+      await fetchUserInfo();
+    } catch (error) {
+      console.warn('获取用户信息失败:', error);
+    }
+  }, [fetchUserInfo]);
   
   // 首页内容
   if (activePage === 'home') {
@@ -646,23 +789,7 @@ export default function Home() {
                 <Button 
                   size="lg" 
                   className="bg-white text-indigo-600 hover:bg-gray-50"
-                  onClick={() => {
-                    setIsWalletConnected(true);
-                    localStorage.setItem('walletAuth', 'true');
-                    localStorage.setItem('walletAuthAddress', '0x1234...5678');
-                    
-                    // 触发自定义事件通知状态变化
-                    const event = new CustomEvent('walletConnected', { 
-                      detail: { connected: true } 
-                    });
-                    document.dispatchEvent(event);
-                    
-                    // 触发storage事件
-                    window.dispatchEvent(new StorageEvent('storage', {
-                      key: 'walletAuth',
-                      newValue: 'true'
-                    }));
-                  }}
+                  onClick={handleConnectWallet}
                 >
                   连接钱包
                 </Button>
@@ -804,96 +931,66 @@ export default function Home() {
         </div>
         
         {/* GitHub成就NFT部分 */}
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">成就NFT验证</h3>
-          <div className="flex items-center justify-center gap-6 mb-2">
-            {MOCK_GITHUB_ACHIEVEMENTS.map(achievement => (
-              <div key={achievement.id} 
-                   className="w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full 
-                            flex items-center justify-center text-2xl shadow-lg">
-                {achievement.icon}
-              </div>
-            ))}
+        {userNFTs.length > 0 && (
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4">成就NFT验证</h3>
+            <div className="flex items-center justify-center gap-6 mb-2">
+              {userNFTs
+                .filter(nft => nft.type === 'achievement')
+                .map(nft => (
+                  <div key={nft.id} 
+                      className="w-14 h-14 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full 
+                                flex items-center justify-center text-2xl shadow-lg">
+                    {nft.icon}
+                  </div>
+                ))}
+            </div>
+            <p className="text-center text-gray-600">您的GitHub成就</p>
           </div>
-          <p className="text-center text-gray-600">您的GitHub成就</p>
-        </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Ethereum 组织成员 NFT */}
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-            <div className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-xl">
-              {/* NFT 顶部图像区域 */}
-              <div className="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-4xl">Ξ</span>
+          {/* 渲染所有类型为"organization"的NFT */}
+          {userNFTs
+            .filter(nft => nft.type === 'organization')
+            .map(nft => (
+              <div key={nft.id} className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
+                <div className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-xl">
+                  {/* NFT 顶部图像区域 */}
+                  <div className="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
+                      <span className="text-4xl">{nft.icon}</span>
+                    </div>
+                  </div>
+                  
+                  {/* NFT 信息区域 */}
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold">{nft.title}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">由 {nft.verifiedBy} 验证</p>
+                      </div>
+                      <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
+                        已上链
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-700 dark:text-gray-300 mb-4">{nft.description}</p>
+                    
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="mr-1">Token ID:</span>
+                        <span className="font-mono">#{nft.id.substring(0, 4)}</span>
+                      </div>
+                      <button className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm">
+                        查看证明
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              {/* NFT 信息区域 */}
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold">Ethereum 组织成员</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">由 GitHub 验证</p>
-                  </div>
-                  <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
-                    已上链
-                  </div>
-                </div>
-                
-                <p className="text-gray-700 dark:text-gray-300 mb-4">验证为 Ethereum 组织的成员资格</p>
-                
-                <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <span className="mr-1">Token ID:</span>
-                    <span className="font-mono">#0004</span>
-                  </div>
-                  <button className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm">
-                    查看证明
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* OpenZeppelin 组织成员 NFT */}
-          <div className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl blur opacity-75 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse-slow"></div>
-            <div className="relative bg-white dark:bg-gray-900 rounded-3xl overflow-hidden shadow-xl">
-              {/* NFT 顶部图像区域 */}
-              <div className="h-48 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-4xl">OZ</span>
-                </div>
-              </div>
-              
-              {/* NFT 信息区域 */}
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold">OpenZeppelin 组织成员</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">由 GitHub 验证</p>
-                  </div>
-                  <div className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full dark:bg-green-900 dark:text-green-300">
-                    已上链
-                  </div>
-                </div>
-                
-                <p className="text-gray-700 dark:text-gray-300 mb-4">验证为 OpenZeppelin 组织的成员资格</p>
-                
-                <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    <span className="mr-1">Token ID:</span>
-                    <span className="font-mono">#0005</span>
-                  </div>
-                  <button className="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium text-sm">
-                    查看证明
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            ))}
         </div>
         
         <style jsx>{`
@@ -907,10 +1004,10 @@ export default function Home() {
           }
           .animate-pulse-slow {
             animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-      `}</style>
-    </div>
-  );
+          }
+        `}</style>
+      </div>
+    );
   }
   
   return null;

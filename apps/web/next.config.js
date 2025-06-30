@@ -23,6 +23,18 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     DATABASE_URL: process.env.DATABASE_URL,
+    // 添加API URL配置，用于客户端直接访问
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  },
+  // 添加API代理配置，解决本地开发环境的跨域问题
+  async rewrites() {
+    console.log('设置API代理: /api/* => http://localhost:3001/*');
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:3001/:path*', // 代理到后端API服务
+      },
+    ];
   },
   // 添加webpack配置以处理Node.js模块
   webpack: (config, { isServer }) => {

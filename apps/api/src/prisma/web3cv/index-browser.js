@@ -147,7 +147,13 @@ exports.Prisma.ResumeScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   content: 'content',
-  parsedContent: 'parsedContent',
+  title: 'title',
+  filename: 'filename',
+  filetype: 'filetype',
+  filesize: 'filesize',
+  parsedData: 'parsedData',
+  vectorId: 'vectorId',
+  status: 'status',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };

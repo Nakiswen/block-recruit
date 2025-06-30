@@ -1,53 +1,67 @@
 import Router from 'koa-router';
+import multer from '@koa/multer';
 import { jwtAuth } from '../middleware/jwt';
 import * as resumesController from '@/controllers/resumesController';
 
 const router = new Router({ prefix: '/resumes' });
 
+// 配置 Multer 用于文件上传
+const upload = multer({
+  storage: multer.memoryStorage(), // 将文件保存在内存中
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/png',
+      'image/jpeg',
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的文件类型'), false);
+    }
+  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 文件大小限制
+});
+
 /**
  * @swagger
  * /resumes/upload:
  *   post:
- *     summary: 上传简历（Base64或文本）
+ *     summary: 上传简历文件(pdf, docx, png, jpg)
  *     tags:
  *       - 简历
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
- *               content:
+ *               resume:
  *                 type: string
- *                 description: 简历内容（Base64或纯文本）
+ *                 format: binary
+ *                 description: 简历文件
  *     responses:
- *       200:
- *         description: 上传成功，返回简历ID
+ *       201:
+ *         description: 上传成功，返回简历ID和匹配的岗位列表
  */
-router.post('/upload', jwtAuth, resumesController.uploadResume);
+router.post('/upload', jwtAuth, upload.single('resume'), resumesController.uploadResume);
 
 /**
  * @swagger
  * /resumes/match:
  *   post:
- *     summary: 简历与岗位的匹配分析
+ *     summary: 当前用户简历与推荐岗位的匹配分析
  *     tags:
  *       - 简历
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               resumeId:
- *                 type: string
- *               jobId:
- *                 type: string
  *     responses:
  *       200:
- *         description: 匹配分析，返回匹配的岗位列表数据
+ *         description: 匹配分析完成，返回匹配的岗位列表数据
+ *       401:
+ *         description: 用户未授权
+ *       404:
+ *         description: 用户没有简历或没有推荐岗位
  */
 router.post('/match', jwtAuth, resumesController.matchResumeToJob);
 

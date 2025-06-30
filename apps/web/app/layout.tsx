@@ -44,11 +44,12 @@ export default function RootLayout({
     
     setShootingStars(stars);
     
-    // 检查是否已经连接钱包
+    // 检查是否已经连接钱包 - 仅从本地存储读取，不发送请求
     if (typeof window !== 'undefined') {
       const savedAddress = localStorage.getItem('walletAuthAddress');
       const savedAuth = localStorage.getItem('walletAuth');
-      if (savedAddress && savedAuth) {
+      if (savedAddress && savedAuth === 'true') {
+        // 只设置本地状态，不发送网络请求
         setIsConnected(true);
         setWalletAddress(savedAddress);
       }

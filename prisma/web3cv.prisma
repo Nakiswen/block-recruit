@@ -42,13 +42,22 @@ model Job {
 
 /// 简历表，记录用户上传的简历
 model Resume {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content     String   // 原始简历内容
-  parsedContent Json?  // 解析后的结构化内容
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content       String    // 原始简历内容
+  title         String?   // 简历标题
+  filename      String?   // 原始文件名
+  filetype      String?   // 文件类型(pdf,docx等)
+  filesize      Int?      // 文件大小(字节)
+  parsedData    Json?     // 解析后的结构化内容
+  vectorId      String?   // 向量数据库中的向量ID
+  status        String    @default("pending") // 处理状态：pending, processed, failed
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
 }
 
 /// 简历分析表，记录简历与岗位的匹配分析结果

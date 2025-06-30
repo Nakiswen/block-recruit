@@ -1,12 +1,13 @@
 import { ragService } from '../rag/ragService';
-import { resumePrisma } from '../prisma/client';
+import { resumePrisma, jobsPrisma } from '../prisma/client';
 import * as dotenv from 'dotenv';
+import { Resume } from '@/prisma/web3cv';
 
 // 加载环境变量
 dotenv.config();
 
 /**
- * 测试RAG服务 - 将PostgreSQL中的简历数据转换为Pinecone向量
+ * 测试RAG服务 - 将PostgreSQL中的简历数据转换为Pinecone向量，并进行岗位匹配
  */
 async function testResumeRagService() {
   try {
@@ -14,76 +15,105 @@ async function testResumeRagService() {
     await ragService.init();
     console.log('RAG服务初始化成功');
     
-    // 获取简历数据 (限制5条用于测试)
+    // 获取简历数据 (限制1条用于测试)
     console.log('从PostgreSQL获取简历数据...');
-    const resumes = await resumePrisma.resume.findMany({
-      take: 5,
+    const resume = await resumePrisma.resume.findFirst({
       orderBy: {
         createdAt: 'desc'
       }
     });
+    console.log("🚀 ~ testResumeRagService ~ resume:", resume)
     
-    if (!resumes || resumes.length === 0) {
+    if (!resume) {
       console.log('没有找到简历数据');
       return;
     }
     
-    console.log(`获取到 ${resumes.length} 条简历数据`);
+    console.log(`获取到简历数据，ID: ${resume.id}`);
     
-    // 提取简历ID
-    const resumeIds = resumes.map(resume => resume.id);
-    console.log('简历ID列表:', resumeIds);
-    
-    // 处理每一份简历，生成向量
-    console.log('开始处理简历数据，生成向量...');
-    
-    const results = {
-      total: resumeIds.length,
-      success: 0,
-      failed: 0,
-      errors: [] as string[]
-    };
-    
-    for (const resumeId of resumeIds) {
-      try {
-        console.log(`处理简历 ID: ${resumeId}`);
-        await ragService.processResume(resumeId);
-        results.success++;
-      } catch (error) {
-        results.failed++;
-        const errorMessage = `简历ID ${resumeId}: ${(error as Error).message}`;
-        results.errors.push(errorMessage);
-        console.error(errorMessage);
-      }
+    // 处理简历，生成向量
+    console.log('\n开始处理简历数据，生成向量...');
+    try {
+      await ragService.vectorizeAndStoreResume(resume as Resume);
+      console.log('向量生成成功');
+    } catch (error) {
+      console.error('向量生成失败:', error);
+      return;
     }
     
-    console.log('处理结果统计:');
-    console.log(`- 总数: ${results.total}`);
-    console.log(`- 成功: ${results.success}`);
-    console.log(`- 失败: ${results.failed}`);
+    // 获取简历向量
+    console.log('\n获取简历向量...');
+    const resumeVector = await ragService.getResumeVector(resume.id);
     
-    if (results.errors.length > 0) {
-      console.log('错误信息:');
-      results.errors.forEach(error => console.log(`  - ${error}`));
+    if (!resumeVector) {
+      console.log('未找到简历向量');
+      return;
     }
     
-    // 如果有成功处理的简历，尝试检索一个
-    if (results.success > 0) {
-      const testResumeId = resumeIds.find((_, index) => !results.errors.some(err => err.includes(resumeIds[index])));
+    console.log('成功获取简历向量:');
+    console.log(`- ID: ${resumeVector.id}`);
+    console.log(`- 向量维度: ${resumeVector.vector.length}`);
+    console.log('- 元数据:', JSON.stringify(resumeVector.metadata, null, 2));
+    
+    // 使用向量搜索匹配岗位
+    console.log('\n使用简历向量搜索匹配岗位...');
+    try {
+      const searchOptions = {
+        topK: 5,
+        minScore: 0.5
+      };
       
-      if (testResumeId) {
-        console.log(`\n测试检索简历向量 (ID: ${testResumeId})...`);
+      const searchResults = await ragService.findSimilarJobs(resumeVector.vector, searchOptions);
+      
+      if (searchResults.matches.length === 0) {
+        console.log('没有找到匹配的岗位');
+      } else {
+        console.log(`找到 ${searchResults.matches.length} 个匹配的岗位:`);
         
-        const resumeVector = await ragService.getResumeVector(testResumeId);
-        if (resumeVector) {
-          console.log('成功检索到简历向量:');
-          console.log(`- ID: ${resumeVector.id}`);
-          console.log(`- 向量维度: ${resumeVector.vector.length}`);
-          console.log('- 元数据:', JSON.stringify(resumeVector.metadata, null, 2));
-        } else {
-          console.log('未找到简历向量');
+        // 显示向量搜索结果
+        for (const match of searchResults.matches) {
+          console.log(`\n- 岗位ID: ${match.id}`);
+          console.log(`  相似度分数: ${match.score.toFixed(4)}`);
+          
+          // 获取岗位详情
+          try {
+            const job = await jobsPrisma.job_posting.findUnique({
+              where: { topic_id: BigInt(match.id) }
+            });
+            
+            if (job) {
+              console.log(`  岗位名称: ${job.position_name}`);
+              console.log(`  公司: ${job.company || '未知'}`);
+            }
+          } catch (err) {
+            console.error(`获取岗位详情失败:`, err);
+          }
+        }
+        
+        // 使用AI增强匹配
+        console.log('\n开始进行AI增强匹配分析...');
+        try {
+          const enhancedMatches = await ragService.findMatchingJobs(resume.id, 3, {});
+          
+          if (enhancedMatches.length > 0) {
+            console.log(`\nAI增强匹配结果 (Top ${enhancedMatches.length}):`);
+            enhancedMatches.forEach((match, index) => {
+              console.log(`\n[${index + 1}] 岗位: ${match.job.title || '未知岗位'}`);
+              console.log(`  匹配分数: ${match.matchDetails.score.toFixed(2)}`);
+              console.log(`  匹配技能: ${match.matchDetails.matchedSkills.join(', ')}`);
+              console.log(`  欠缺技能: ${match.matchDetails.missingSkills.join(', ')}`);
+              console.log(`  匹配原因: ${match.matchDetails.matchReasons.join('; ')}`);
+              console.log(`  改进建议: ${match.matchDetails.improvementSuggestions.join('; ')}`);
+            });
+          } else {
+            console.log('AI增强匹配分析未返回结果');
+          }
+        } catch (error) {
+          console.error('AI增强匹配分析失败:', error);
         }
       }
+    } catch (error) {
+      console.error('向量搜索失败:', error);
     }
     
     console.log('\nRAG服务测试完成');
@@ -92,6 +122,7 @@ async function testResumeRagService() {
   } finally {
     // 关闭Prisma连接
     await resumePrisma.$disconnect();
+    await jobsPrisma.$disconnect();
     process.exit(0);
   }
 }

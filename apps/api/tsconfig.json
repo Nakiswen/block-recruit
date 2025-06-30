@@ -21,6 +21,14 @@
   "ts-node": {
     "esm": true
   },
-  "include": ["src/**/*.ts", "src/jest.config.js", "src/test/__mocks__/custom-mocks.js"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts", "src/jest.config.js"],
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "src/test",
+    "src/test/**/*",
+    "**/__tests__/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

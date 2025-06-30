@@ -1,0 +1,29 @@
+# 构建产物
+.next/
+out/
+dist/
+build/
+
+# 依赖
+node_modules/
+
+# 自动生成的文件
+public/
+
+# Prisma生成的文件
+apps/api/src/prisma/web3cv/
+apps/api/src/prisma/web3jobs/
+
+# 配置文件
+next-env.d.ts
+
+# 包管理器文件
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# 特殊文件
+*.min.js
+*.svg
+*.md
+*.json 

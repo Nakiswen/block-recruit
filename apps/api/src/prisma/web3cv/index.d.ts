@@ -3383,14 +3383,30 @@ export namespace Prisma {
 
   export type AggregateResume = {
     _count: ResumeCountAggregateOutputType | null
+    _avg: ResumeAvgAggregateOutputType | null
+    _sum: ResumeSumAggregateOutputType | null
     _min: ResumeMinAggregateOutputType | null
     _max: ResumeMaxAggregateOutputType | null
+  }
+
+  export type ResumeAvgAggregateOutputType = {
+    filesize: number | null
+  }
+
+  export type ResumeSumAggregateOutputType = {
+    filesize: number | null
   }
 
   export type ResumeMinAggregateOutputType = {
     id: string | null
     userId: string | null
     content: string | null
+    title: string | null
+    filename: string | null
+    filetype: string | null
+    filesize: number | null
+    vectorId: string | null
+    status: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3399,6 +3415,12 @@ export namespace Prisma {
     id: string | null
     userId: string | null
     content: string | null
+    title: string | null
+    filename: string | null
+    filetype: string | null
+    filesize: number | null
+    vectorId: string | null
+    status: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3407,17 +3429,37 @@ export namespace Prisma {
     id: number
     userId: number
     content: number
-    parsedContent: number
+    title: number
+    filename: number
+    filetype: number
+    filesize: number
+    parsedData: number
+    vectorId: number
+    status: number
     createdAt: number
     updatedAt: number
     _all: number
   }
 
 
+  export type ResumeAvgAggregateInputType = {
+    filesize?: true
+  }
+
+  export type ResumeSumAggregateInputType = {
+    filesize?: true
+  }
+
   export type ResumeMinAggregateInputType = {
     id?: true
     userId?: true
     content?: true
+    title?: true
+    filename?: true
+    filetype?: true
+    filesize?: true
+    vectorId?: true
+    status?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3426,6 +3468,12 @@ export namespace Prisma {
     id?: true
     userId?: true
     content?: true
+    title?: true
+    filename?: true
+    filetype?: true
+    filesize?: true
+    vectorId?: true
+    status?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3434,7 +3482,13 @@ export namespace Prisma {
     id?: true
     userId?: true
     content?: true
-    parsedContent?: true
+    title?: true
+    filename?: true
+    filetype?: true
+    filesize?: true
+    parsedData?: true
+    vectorId?: true
+    status?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -3478,6 +3532,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: ResumeAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ResumeSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ResumeMinAggregateInputType
@@ -3508,6 +3574,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ResumeCountAggregateInputType | true
+    _avg?: ResumeAvgAggregateInputType
+    _sum?: ResumeSumAggregateInputType
     _min?: ResumeMinAggregateInputType
     _max?: ResumeMaxAggregateInputType
   }
@@ -3516,10 +3584,18 @@ export namespace Prisma {
     id: string
     userId: string
     content: string
-    parsedContent: JsonValue | null
+    title: string | null
+    filename: string | null
+    filetype: string | null
+    filesize: number | null
+    parsedData: JsonValue | null
+    vectorId: string | null
+    status: string
     createdAt: Date
     updatedAt: Date
     _count: ResumeCountAggregateOutputType | null
+    _avg: ResumeAvgAggregateOutputType | null
+    _sum: ResumeSumAggregateOutputType | null
     _min: ResumeMinAggregateOutputType | null
     _max: ResumeMaxAggregateOutputType | null
   }
@@ -3542,7 +3618,13 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     content?: boolean
-    parsedContent?: boolean
+    title?: boolean
+    filename?: boolean
+    filetype?: boolean
+    filesize?: boolean
+    parsedData?: boolean
+    vectorId?: boolean
+    status?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -3552,7 +3634,13 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     content?: boolean
-    parsedContent?: boolean
+    title?: boolean
+    filename?: boolean
+    filetype?: boolean
+    filesize?: boolean
+    parsedData?: boolean
+    vectorId?: boolean
+    status?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -3562,7 +3650,13 @@ export namespace Prisma {
     id?: boolean
     userId?: boolean
     content?: boolean
-    parsedContent?: boolean
+    title?: boolean
+    filename?: boolean
+    filetype?: boolean
+    filesize?: boolean
+    parsedData?: boolean
+    vectorId?: boolean
+    status?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -3583,7 +3677,13 @@ export namespace Prisma {
       id: string
       userId: string
       content: string
-      parsedContent: Prisma.JsonValue | null
+      title: string | null
+      filename: string | null
+      filetype: string | null
+      filesize: number | null
+      parsedData: Prisma.JsonValue | null
+      vectorId: string | null
+      status: string
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["resume"]>
@@ -3983,7 +4083,13 @@ export namespace Prisma {
     readonly id: FieldRef<"Resume", 'String'>
     readonly userId: FieldRef<"Resume", 'String'>
     readonly content: FieldRef<"Resume", 'String'>
-    readonly parsedContent: FieldRef<"Resume", 'Json'>
+    readonly title: FieldRef<"Resume", 'String'>
+    readonly filename: FieldRef<"Resume", 'String'>
+    readonly filetype: FieldRef<"Resume", 'String'>
+    readonly filesize: FieldRef<"Resume", 'Int'>
+    readonly parsedData: FieldRef<"Resume", 'Json'>
+    readonly vectorId: FieldRef<"Resume", 'String'>
+    readonly status: FieldRef<"Resume", 'String'>
     readonly createdAt: FieldRef<"Resume", 'DateTime'>
     readonly updatedAt: FieldRef<"Resume", 'DateTime'>
   }
@@ -7294,7 +7400,13 @@ export namespace Prisma {
     id: 'id',
     userId: 'userId',
     content: 'content',
-    parsedContent: 'parsedContent',
+    title: 'title',
+    filename: 'filename',
+    filetype: 'filetype',
+    filesize: 'filesize',
+    parsedData: 'parsedData',
+    vectorId: 'vectorId',
+    status: 'status',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -7432,6 +7544,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Int'
+   */
+  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+  /**
+   * Reference to a field of type 'Int[]'
+   */
+  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
    * Reference to a field of type 'Float'
    */
   export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
@@ -7449,20 +7575,6 @@ export namespace Prisma {
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int'
-   */
-  export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int[]'
-   */
-  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
   /**
    * Deep Input Types
@@ -7620,7 +7732,13 @@ export namespace Prisma {
     id?: StringFilter<"Resume"> | string
     userId?: StringFilter<"Resume"> | string
     content?: StringFilter<"Resume"> | string
-    parsedContent?: JsonNullableFilter<"Resume">
+    title?: StringNullableFilter<"Resume"> | string | null
+    filename?: StringNullableFilter<"Resume"> | string | null
+    filetype?: StringNullableFilter<"Resume"> | string | null
+    filesize?: IntNullableFilter<"Resume"> | number | null
+    parsedData?: JsonNullableFilter<"Resume">
+    vectorId?: StringNullableFilter<"Resume"> | string | null
+    status?: StringFilter<"Resume"> | string
     createdAt?: DateTimeFilter<"Resume"> | Date | string
     updatedAt?: DateTimeFilter<"Resume"> | Date | string
     user?: XOR<UserRelationFilter, UserWhereInput>
@@ -7630,7 +7748,13 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     content?: SortOrder
-    parsedContent?: SortOrderInput | SortOrder
+    title?: SortOrderInput | SortOrder
+    filename?: SortOrderInput | SortOrder
+    filetype?: SortOrderInput | SortOrder
+    filesize?: SortOrderInput | SortOrder
+    parsedData?: SortOrderInput | SortOrder
+    vectorId?: SortOrderInput | SortOrder
+    status?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -7643,7 +7767,13 @@ export namespace Prisma {
     NOT?: ResumeWhereInput | ResumeWhereInput[]
     userId?: StringFilter<"Resume"> | string
     content?: StringFilter<"Resume"> | string
-    parsedContent?: JsonNullableFilter<"Resume">
+    title?: StringNullableFilter<"Resume"> | string | null
+    filename?: StringNullableFilter<"Resume"> | string | null
+    filetype?: StringNullableFilter<"Resume"> | string | null
+    filesize?: IntNullableFilter<"Resume"> | number | null
+    parsedData?: JsonNullableFilter<"Resume">
+    vectorId?: StringNullableFilter<"Resume"> | string | null
+    status?: StringFilter<"Resume"> | string
     createdAt?: DateTimeFilter<"Resume"> | Date | string
     updatedAt?: DateTimeFilter<"Resume"> | Date | string
     user?: XOR<UserRelationFilter, UserWhereInput>
@@ -7653,12 +7783,20 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     content?: SortOrder
-    parsedContent?: SortOrderInput | SortOrder
+    title?: SortOrderInput | SortOrder
+    filename?: SortOrderInput | SortOrder
+    filetype?: SortOrderInput | SortOrder
+    filesize?: SortOrderInput | SortOrder
+    parsedData?: SortOrderInput | SortOrder
+    vectorId?: SortOrderInput | SortOrder
+    status?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: ResumeCountOrderByAggregateInput
+    _avg?: ResumeAvgOrderByAggregateInput
     _max?: ResumeMaxOrderByAggregateInput
     _min?: ResumeMinOrderByAggregateInput
+    _sum?: ResumeSumOrderByAggregateInput
   }
 
   export type ResumeScalarWhereWithAggregatesInput = {
@@ -7668,7 +7806,13 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"Resume"> | string
     userId?: StringWithAggregatesFilter<"Resume"> | string
     content?: StringWithAggregatesFilter<"Resume"> | string
-    parsedContent?: JsonNullableWithAggregatesFilter<"Resume">
+    title?: StringNullableWithAggregatesFilter<"Resume"> | string | null
+    filename?: StringNullableWithAggregatesFilter<"Resume"> | string | null
+    filetype?: StringNullableWithAggregatesFilter<"Resume"> | string | null
+    filesize?: IntNullableWithAggregatesFilter<"Resume"> | number | null
+    parsedData?: JsonNullableWithAggregatesFilter<"Resume">
+    vectorId?: StringNullableWithAggregatesFilter<"Resume"> | string | null
+    status?: StringWithAggregatesFilter<"Resume"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Resume"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Resume"> | Date | string
   }
@@ -8053,7 +8197,13 @@ export namespace Prisma {
   export type ResumeCreateInput = {
     id?: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutResumesInput
@@ -8063,7 +8213,13 @@ export namespace Prisma {
     id?: string
     userId: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -8071,7 +8227,13 @@ export namespace Prisma {
   export type ResumeUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutResumesNestedInput
@@ -8081,7 +8243,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -8090,7 +8258,13 @@ export namespace Prisma {
     id?: string
     userId: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -8098,7 +8272,13 @@ export namespace Prisma {
   export type ResumeUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -8107,7 +8287,13 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -8619,6 +8805,17 @@ export namespace Prisma {
     _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
+  export type IntNullableFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableFilter<$PrismaModel> | number | null
+  }
+
   export type UserRelationFilter = {
     is?: UserWhereInput
     isNot?: UserWhereInput
@@ -8628,15 +8825,31 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     content?: SortOrder
-    parsedContent?: SortOrder
+    title?: SortOrder
+    filename?: SortOrder
+    filetype?: SortOrder
+    filesize?: SortOrder
+    parsedData?: SortOrder
+    vectorId?: SortOrder
+    status?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type ResumeAvgOrderByAggregateInput = {
+    filesize?: SortOrder
   }
 
   export type ResumeMaxOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
     content?: SortOrder
+    title?: SortOrder
+    filename?: SortOrder
+    filetype?: SortOrder
+    filesize?: SortOrder
+    vectorId?: SortOrder
+    status?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -8645,8 +8858,34 @@ export namespace Prisma {
     id?: SortOrder
     userId?: SortOrder
     content?: SortOrder
+    title?: SortOrder
+    filename?: SortOrder
+    filetype?: SortOrder
+    filesize?: SortOrder
+    vectorId?: SortOrder
+    status?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type ResumeSumOrderByAggregateInput = {
+    filesize?: SortOrder
+  }
+
+  export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
   }
 
   export type FloatFilter<$PrismaModel = never> = {
@@ -9024,6 +9263,14 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type NullableIntFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type UserUpdateOneRequiredWithoutResumesNestedInput = {
     create?: XOR<UserCreateWithoutResumesInput, UserUncheckedCreateWithoutResumesInput>
     connectOrCreate?: UserCreateOrConnectWithoutResumesInput
@@ -9253,6 +9500,33 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedIntNullableFilter<$PrismaModel>
+    _max?: NestedIntNullableFilter<$PrismaModel>
+  }
+
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
   export type NestedFloatFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
     in?: number[] | ListFloatFieldRefInput<$PrismaModel>
@@ -9346,7 +9620,13 @@ export namespace Prisma {
   export type ResumeCreateWithoutUserInput = {
     id?: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9354,7 +9634,13 @@ export namespace Prisma {
   export type ResumeUncheckedCreateWithoutUserInput = {
     id?: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9447,7 +9733,13 @@ export namespace Prisma {
     id?: StringFilter<"Resume"> | string
     userId?: StringFilter<"Resume"> | string
     content?: StringFilter<"Resume"> | string
-    parsedContent?: JsonNullableFilter<"Resume">
+    title?: StringNullableFilter<"Resume"> | string | null
+    filename?: StringNullableFilter<"Resume"> | string | null
+    filetype?: StringNullableFilter<"Resume"> | string | null
+    filesize?: IntNullableFilter<"Resume"> | number | null
+    parsedData?: JsonNullableFilter<"Resume">
+    vectorId?: StringNullableFilter<"Resume"> | string | null
+    status?: StringFilter<"Resume"> | string
     createdAt?: DateTimeFilter<"Resume"> | Date | string
     updatedAt?: DateTimeFilter<"Resume"> | Date | string
   }
@@ -9898,7 +10190,13 @@ export namespace Prisma {
   export type ResumeCreateManyUserInput = {
     id?: string
     content: string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: string | null
+    filename?: string | null
+    filetype?: string | null
+    filesize?: number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: string | null
+    status?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -9951,7 +10249,13 @@ export namespace Prisma {
   export type ResumeUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9959,7 +10263,13 @@ export namespace Prisma {
   export type ResumeUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -9967,7 +10277,13 @@ export namespace Prisma {
   export type ResumeUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
-    parsedContent?: NullableJsonNullValueInput | InputJsonValue
+    title?: NullableStringFieldUpdateOperationsInput | string | null
+    filename?: NullableStringFieldUpdateOperationsInput | string | null
+    filetype?: NullableStringFieldUpdateOperationsInput | string | null
+    filesize?: NullableIntFieldUpdateOperationsInput | number | null
+    parsedData?: NullableJsonNullValueInput | InputJsonValue
+    vectorId?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

@@ -21,7 +21,7 @@ class EmbeddingService {
    * @param text 输入文本
    * @returns 向量数组
    */
-  async generateEmbedding(text: string): Promise<number[]> {
+  async  generateEmbedding(text: string): Promise<number[]> {
     try {
       // 对文本进行清理和归一化处理
       const normalizedText = this.normalizeText(text);
@@ -105,34 +105,38 @@ class EmbeddingService {
   }
 
   /**
-   * 计算两个向量之间的余弦相似度
-   * @param vector1 向量1
-   * @param vector2 向量2
-   * @returns 余弦相似度 (0-1之间)
+   * 使用向量化操作的高性能版本（如果需要处理大量数据）
+   * 注意：这个版本需要额外的数学库支持
    */
-  calculateCosineSimilarity(vector1: number[], vector2: number[]): number {
-    if (vector1.length !== vector2.length) {
-      throw new Error('向量维度不匹配');
-    }
+  calculateCosineSimilarityVectorized(vector1: number[], vector2: number[]): number {
+    // 如果可以使用类似numpy的库，这里可以实现向量化操作
+    // 例如使用ml-matrix或其他数学库
+    
+    // 当前实现：使用TypedArray提高性能
+    const vec1 = new Float64Array(vector1);
+    const vec2 = new Float64Array(vector2);
     
     let dotProduct = 0;
     let magnitude1 = 0;
     let magnitude2 = 0;
     
-    for (let i = 0; i < vector1.length; i++) {
-      dotProduct += vector1[i] * vector2[i];
-      magnitude1 += vector1[i] * vector1[i];
-      magnitude2 += vector2[i] * vector2[i];
+    for (let i = 0; i < vec1.length; i++) {
+      dotProduct += vec1[i] * vec2[i];
+      magnitude1 += vec1[i] * vec1[i];
+      magnitude2 += vec2[i] * vec2[i];
     }
     
-    magnitude1 = Math.sqrt(magnitude1);
-    magnitude2 = Math.sqrt(magnitude2);
+    const mag1 = Math.sqrt(magnitude1);
+    const mag2 = Math.sqrt(magnitude2);
     
-    if (magnitude1 === 0 || magnitude2 === 0) {
+    if (mag1 < 1e-10 || mag2 < 1e-10) {
       return 0;
     }
     
-    return dotProduct / (magnitude1 * magnitude2);
+    let similarity = dotProduct / (mag1 * mag2);
+    similarity = Math.max(-1, Math.min(1, similarity));
+    
+    return (similarity + 1) / 2;
   }
 
   /**

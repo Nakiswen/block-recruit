@@ -6,12 +6,14 @@ import { ethers } from 'ethers';
 import Button from './Button';
 import { connectWallet, disconnectWallet, listenAccountChanges, listenChainChanges, getWalletSignature } from '@/packages/web3-utils/wallet';
 import WalletConnectModal, { WalletType } from './WalletConnectModal';
+import axios from 'axios';
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
   onDisconnect?: () => void;
   isConnected?: boolean;
   walletAddress?: string;
+  apiUrl?: string; // 可选的API URL
 }
 
 const WalletConnect: React.FC<WalletConnectProps> = ({
@@ -19,6 +21,7 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   onDisconnect,
   isConnected: propsIsConnected,
   walletAddress: propsWalletAddress,
+  apiUrl = '/api', // 默认使用相对路径
 }) => {
   // 状态管理
   const [isConnecting, setIsConnecting] = useState(false);
@@ -26,6 +29,46 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   const [walletAddress, setWalletAddress] = useState<string>(propsWalletAddress || '');
   const [chainId, setChainId] = useState<number>();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isVerifyingSession, setIsVerifyingSession] = useState(false);
+
+  // 验证会话状态
+  const verifySession = useCallback(async (token: string): Promise<boolean> => {
+    try {
+      setIsVerifyingSession(true);
+      console.log('验证钱包会话状态...');
+      
+      // 添加超时控制，避免长时间等待
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+      
+      const response = await axios.get(`${apiUrl}/auth/session`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal
+      }).catch(error => {
+        // 如果是网络错误或API不可用，静默失败
+        console.warn('会话验证请求失败，可能是API未启动或网络问题:', error.message);
+        return { data: { isValid: false } };
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const { isValid, address } = response.data;
+      console.log('会话验证结果:', isValid ? '有效' : '无效', address);
+      
+      if (isValid && address) {
+        setWalletAddress(address);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      // 静默处理错误
+      console.warn('会话验证过程中出现错误:', error);
+      return false;
+    } finally {
+      setIsVerifyingSession(false);
+    }
+  }, [apiUrl]);
 
   // 初始化 - 检查钱包是否已连接
   useEffect(() => {
@@ -34,41 +77,37 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
         // 检查是否有保存的地址和签名
         const savedAddress = localStorage.getItem('walletAuthAddress');
         const savedAuth = localStorage.getItem('walletAuth');
+        const token = localStorage.getItem('token');
         
-        if (savedAddress && savedAuth) {
+        if (savedAddress && savedAuth && token) {
+          // 不立即验证会话，先显示已连接状态
           setWalletAddress(savedAddress);
+          if (onConnect) {
+            onConnect(savedAddress);
+          }
           
-          // 检查是否可以检测到以太坊提供者
-          if (window.ethereum) {
+          // 延迟验证会话，避免页面加载时立即发送请求
+          setTimeout(async () => {
             try {
-              // 尝试获取链ID
-              const provider = new ethers.BrowserProvider(window.ethereum);
-              const network = await provider.getNetwork();
-              setChainId(Number(network.chainId));
+              // 先尝试验证会话有效性
+              const isSessionValid = await verifySession(token);
               
-              // 检查当前连接的账户
-              const accounts = await provider.listAccounts();
-              if (accounts.length > 0 && accounts[0].address.toLowerCase() === savedAddress.toLowerCase()) {
-                // 确保有有效的签名
-                try {
-                  await getWalletSignature(savedAddress, provider);
-                  if (onConnect) {
-                    onConnect(savedAddress);
-                  }
-                } catch (err) {
-                  console.warn('无法验证现有签名，可能需要重新连接', err);
-                }
+              if (!isSessionValid) {
+                console.log('会话已过期，但保持钱包连接状态');
               }
             } catch (err) {
-              console.warn('检查现有钱包连接时出错', err);
+              // 静默处理错误
+              console.warn('延迟验证会话时出错:', err);
             }
-          }
+          }, 3000); // 延迟3秒验证
+          
+          return;
         }
       }
     };
     
     checkExistingConnection();
-  }, [onConnect]);
+  }, [onConnect, verifySession]);
   
   // 当props中的地址变化时更新本地状态
   useEffect(() => {
@@ -184,11 +223,11 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
           variant="primary" 
           size="sm" 
           onClick={() => setIsModalOpen(true)}
-          disabled={isConnecting}
+          disabled={isConnecting || isVerifyingSession}
           className="flex items-center"
         >
           <WalletIcon className="h-5 w-5 mr-2" />
-          {isConnecting ? '连接中...' : '连接钱包'}
+          {isConnecting ? '连接中...' : isVerifyingSession ? '验证中...' : '连接钱包'}
         </Button>
       ) : (
         <div className="flex items-center">

@@ -1,4 +1,4 @@
-import { ragService } from '../rag/ragService';
+import { ragService } from '../services/rag/ragService';
 import { jobsPrisma } from '../prisma/client';
 import * as dotenv from 'dotenv';
 
@@ -36,20 +36,20 @@ async function testRagService() {
     console.log('岗位ID列表:', jobIds);
 
 
-    const testJobId = jobIds[0];
-    console.log(`\n测试检索岗位向量 (ID: ${testJobId})...`);
+    // const testJobId = jobIds[0];
+    // console.log(`\n测试检索岗位向量 (ID: ${testJobId})...`);
     
-    const jobVector = await ragService.getJobVector(testJobId);
-    if (jobVector) {
-      console.log('成功检索到岗位向量:');
-      console.log(`- ID: ${jobVector.id}`);
-      console.log(`- 向量维度: ${jobVector.vector.length}`);
-      console.log('- 元数据:', JSON.stringify(jobVector.metadata, null, 2));
-      console.log('\nRAG服务测试完成......QAQ');
-      return;
-    } else {
-      console.log('未找到岗位向量');
-    }
+    // const jobVector = await ragService.getJobVector(testJobId);
+    // if (jobVector) {
+    //   console.log('成功检索到岗位向量:');
+    //   console.log(`- ID: ${jobVector.id}`);
+    //   console.log(`- 向量维度: ${jobVector.vector.length}`);
+    //   console.log('- 元数据:', JSON.stringify(jobVector.metadata, null, 2));
+    //   console.log('\nRAG服务测试完成......QAQ');
+    //   return;
+    // } else {
+    //   console.log('未找到岗位向量');
+    // }
 
     
     // 处理岗位数据，生成向量

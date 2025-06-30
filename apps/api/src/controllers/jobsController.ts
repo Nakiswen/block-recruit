@@ -1,13 +1,15 @@
-import type { Context } from 'koa';
+import type { Context, Next } from 'koa';
 import * as jobsService from '@/services/jobsService';
 import type { job_posting } from '@/prisma/web3jobs';
 
 /**
  * 获取岗位列表 Controller
  * 负责参数校验、错误处理，调用 Service 层
+ * @param ctx Koa上下文
+ * @param next Koa next 函数
  * @returns jobs 类型为 job_posting[]，来源于 prisma
  */
-export async function getJobList(ctx: Context): Promise<void> {
+export async function getJobList(ctx: Context, next: Next): Promise<void> {
   const page = Number(ctx.query.page) || 1;
   const pageSize = Number(ctx.query.pageSize) || 20;
   try {
