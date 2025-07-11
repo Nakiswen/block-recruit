@@ -22,13 +22,7 @@ module.exports = {
       typescript: {},
     },
   },
-  plugins: [
-    '@typescript-eslint',
-    'react',
-    'react-hooks',
-    'import',
-    'jsx-a11y',
-  ],
+  plugins: ['@typescript-eslint', 'react', 'react-hooks', 'import', 'jsx-a11y'],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -49,14 +43,14 @@ module.exports = {
     'react/jsx-filename-extension': [1, { extensions: ['.tsx'] }], // 允许.tsx文件中使用JSX
     'react/jsx-props-no-spreading': 'off', // 允许props展开
     'react/require-default-props': 'off', // TypeScript处理默认props
-    
+
     // TypeScript规则
     '@typescript-eslint/explicit-module-boundary-types': 'off', // 不强制要求导出函数和类的公共类方法的显式返回和参数类型
     '@typescript-eslint/no-explicit-any': 'warn', // 警告使用any类型
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }], // 禁止未使用的变量，忽略下划线开头的参数
     '@typescript-eslint/no-empty-function': 'warn', // 警告空函数
     '@typescript-eslint/ban-ts-comment': 'warn', // 警告使用@ts-ignore等注释
-    
+
     // 导入规则
     'import/prefer-default-export': 'off', // 不要求只有一个导出时使用默认导出
     'import/no-extraneous-dependencies': ['error', { devDependencies: true }], // 允许导入devDependencies
@@ -68,12 +62,15 @@ module.exports = {
         alphabetize: { order: 'asc' },
       },
     ],
-    
+
     // 通用规则
     'no-console': ['warn', { allow: ['warn', 'error'] }], // 警告console.log，允许console.warn和console.error
     'no-debugger': 'warn', // 警告使用debugger
     'no-unused-vars': 'off', // 关闭原生的no-unused-vars，使用@typescript-eslint/no-unused-vars代替
-    'camelcase': 'off', // 不强制使用驼峰命名
+    camelcase: 'off', // 不强制使用驼峰命名
+
+    // Next.js规则
+    '@next/next/no-html-link-for-pages': ['error', 'apps/web/app'], // 配置Next.js app目录路径
   },
   overrides: [
     // 为特定文件覆盖规则
@@ -84,4 +81,4 @@ module.exports = {
       },
     },
   ],
-} 
+};
