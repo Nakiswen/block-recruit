@@ -111,7 +111,9 @@ export type Job = {
   educationLevel?: string;
   level?: string;
   salaryBenefits?: string; // 薪资福利描述
-  benefits?: string[];     // 福利列表
+  benefits?: string;       // 福利待遇
+  companyIntroduction?: string; // 公司介绍
+  companyWebsite?: string; // 公司网站
 };
 
 export interface Resume {

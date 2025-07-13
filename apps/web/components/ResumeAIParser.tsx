@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Button } from 'ui';
 import { aiParserFunction, ResumeData } from 'resume-parser';
+import { Card, Button } from 'ui';
 
 interface ResumeAIParserProps {
   file: File | null;

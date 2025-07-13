@@ -8,10 +8,16 @@ try {
   redis = new Redis({
     host: process.env.REDIS_HOST || '127.0.0.1',
     port: Number(process.env.REDIS_PORT || 6379),
-    // password: process.env.REDIS_PASSWORD, // 如有密码请通过环境变量设置
+    // 只有在设置了密码时才添加用户名
+    ...(process.env.REDIS_PASSWORD ? { username: 'default' } : {}), 
+    password: process.env.REDIS_PASSWORD, // 如有密码请通过环境变量设置
     connectTimeout: 5000, // 连接超时时间
     maxRetriesPerRequest: 1, // 减少重试次数
-    retryStrategy: () => null, // 返回null禁用自动重连
+    retryStrategy: (times) => {
+      // 最多重试3次，每次间隔1秒
+      if (times > 3) return null;
+      return 1000;
+    },
     lazyConnect: true, // 懒连接，不在初始化时连接
   });
 
@@ -27,8 +33,8 @@ try {
   });
   
   // 尝试连接
-  redis.connect().catch(() => {
-    console.warn('Redis连接失败，功能将受限');
+  redis.connect().catch((err) => {
+    console.warn(`Redis连接失败，功能将受限: ${err.message}`);
   });
   
 } catch (error) {

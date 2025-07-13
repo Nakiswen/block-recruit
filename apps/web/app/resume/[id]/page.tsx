@@ -1,10 +1,11 @@
 'use client'
 
+import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
 
 export default function ResumeAnalysisPage() {
   const { id } = useParams()
+  const router = useRouter()
   const [analysis, setAnalysis] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')

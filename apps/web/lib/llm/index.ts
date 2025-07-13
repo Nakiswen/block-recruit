@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+
 import {
   fetchJobVectors,
   storeJobVectors,

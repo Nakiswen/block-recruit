@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { Card } from 'ui';
 
 export default function About() {

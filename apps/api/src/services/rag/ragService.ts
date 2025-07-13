@@ -107,8 +107,8 @@ export const ragService = {
             salaryRange: job.min_salary && job.max_salary ? 
               `${job.min_salary}-${job.max_salary}` : undefined,
             location: job.location || undefined,
-            responsibilities: job.content2 || undefined,
-            requirements: job.content3 || undefined,
+            responsibilities: job.content || '',  // 职责应该在主要描述中
+            requirements: job.content2 || '',     // 要求应该在content2中
             // 这里可能需要从tag关系表中获取技能
             skills: [],
             industry: undefined,
@@ -322,7 +322,6 @@ export const ragService = {
       
       // 2. 使用向量相似度查找匹配的岗位
       console.log('🔍 根据向量相似度查找匹配岗位...');
-      console.log("🚀 ~ findMatchingJobs ~ resumeVector.vector:", resumeVector.vector)
       const searchResult = await this.findSimilarJobs(resumeVector.vector, { 
         topK, 
         filters,
@@ -364,8 +363,11 @@ export const ragService = {
               title: job.position_name,
               description: job.content || '',
               companyName: job.company || undefined,
-              responsibilities: job.content2 || undefined,
-              requirements: job.content3 || undefined,
+              responsibilities: job.content || '',
+              requirements: job.content2 || '',
+              benefits: job.content3 || '',  // 福利待遇
+              companyIntroduction: job.company_introduction || '',  // 公司介绍
+              companyWebsite: job.company_website || '',  // 公司网站
               salaryRange: job.min_salary && job.max_salary ? 
                 `${job.min_salary}-${job.max_salary}` : undefined,
               location: job.location || undefined,
@@ -379,7 +381,6 @@ export const ragService = {
               const resume = await resumePrisma.resume.findUnique({
                 where: { id: resumeId }
               });
-              console.log("🚀 ~ searchResult.matches.map ~ resume:", resume)
               
               if (resume) {
                 const resumeData: Resume = {
@@ -472,8 +473,8 @@ export const ragService = {
       title: job.position_name,
       description: job.content || '',
       companyName: job.company || undefined,
-      responsibilities: job.content2 || undefined,
-      requirements: job.content3 || undefined,
+      responsibilities: job.content || '',
+      requirements: job.content2 || '',
       salaryRange: job.min_salary && job.max_salary ? 
         `${job.min_salary}-${job.max_salary}` : undefined,
       location: job.location || undefined,
@@ -609,7 +610,6 @@ export const ragService = {
       
       // 执行向量搜索
       const searchResult = await PineconeClient.search(searchParams);
-      console.log("🚀 ~ findSimilarJobs ~ searchResult:", searchResult);
       
       // 如果搜索失败，返回空结果
       if (!searchResult.success) {
@@ -867,11 +867,12 @@ export const ragService = {
    * 处理简历并查找匹配的岗位 - 一站式处理流程
    * 实现时序图中的完整流程：解析、向量化和匹配
    * @param resumeId 简历ID
-   * @returns 包含处理后的简历数据和匹配结果
+   * @returns 包含处理后的简历数据、匹配结果和原始岗位数据
    */
   async processResumeAndFindMatches(resumeId: string): Promise<{
     resumeData: Resume;
     matches: import('./types').EnhancedMatch[];
+    rawJobsData: any[]; // 添加原始岗位数据返回
   }> {
     try {
       // 步骤 1: 获取简历数据
@@ -880,23 +881,21 @@ export const ragService = {
       });
       
       if (!resume) {
-        throw new Error(`找不到ID为 ${resumeId} 的简历`);
+        throw new Error(`简历 ${resumeId} 不存在`);
       }
       
-      // 步骤 2: 准备简历对象
-      const resumeForProcessing: Resume = {
+      // 创建一个符合aiService要求的Resume对象
+      const resumeForProcessing = {
         id: resume.id,
         userId: resume.userId,
         content: resume.content,
-        name: resume.title || '',
-        // 使用类型断言将数据库中的JSON值转换为Resume接口需要的类型
-        parsedData: (typeof resume.parsedData === 'object' && resume.parsedData !== null) 
-          ? resume.parsedData as any 
-          : undefined
+        name: resume.title,
+        parsedData: resume.parsedData
       };
       
-      // 步骤 3: 解析简历（如果尚未解析）
-      let structuredData;
+      // 步骤 2: 检查解析状态，如果未解析则解析
+      let structuredData = resume.parsedData;
+      
       if (!resume.parsedData || 
           typeof resume.parsedData !== 'object' || 
           !('skills' in resume.parsedData)) {
@@ -916,9 +915,7 @@ export const ragService = {
         resumeForProcessing.parsedData = structuredData;
       }
       
-      // 步骤 4: 向量化简历
-      console.log(`📊 开始向量化简历 ${resumeId}...`);
-      // 检查向量是否已存在
+      // 步骤 3: 检查向量化状态，如果未向量化则向量化
       let resumeVector = await this.getResumeVector(resumeId);
       
       if (!resumeVector?.vector) {
@@ -932,48 +929,57 @@ export const ragService = {
             vector: vectorResult.vector,
             metadata: vectorResult.metadata
           };
-        } else {
-          console.log(`⚠️ 向量化失败或结果不完整，尝试从缓存获取`);
-          // 再次尝试从缓存或数据库获取
-          resumeVector = await this.getResumeVector(resumeId);
           
-          if (!resumeVector?.vector) {
-            throw new Error(`无法为简历 ${resumeId} 生成向量，匹配过程终止`);
-          }
+          // 更新简历状态
+          await resumePrisma.resume.update({
+            where: { id: resumeId },
+            data: { 
+              vectorId: resumeVector.id,
+              status: 'vectorized'
+            }
+          });
         }
       }
       
-      // 步骤 5: 查找匹配的岗位
-      console.log(`🔍 查找与简历 ${resumeId} 匹配的岗位...`);
-      const topK = 5; // 默认返回5个匹配结果
-
+      // 步骤 4: 查找匹配的岗位
+      console.log(`🔍 查找与简历 ${resumeId} 匹配的岗位`);
+      const topK = 10;
+      const matches = await this.findMatchingJobs(resumeId, topK);
       
-      // 方案1：使用智能过滤器
-      const filterParams = {
-        searchType: SearchType.CANDIDATE_TO_JOB,
-        candidateData: {
-          parsedRequiredSkills: resumeForProcessing.parsedData?.skills || []
-        }
-      };
-      console.log('📋 构建智能过滤器参数:', JSON.stringify(filterParams, null, 2));
-      
-      const filter = SmartFilterBuilder.buildFilter(filterParams);
-      console.log('🔍 生成的过滤器:', JSON.stringify(filter, null, 2));
-      
-      // 使用内存中的向量数据查找匹配结果
-      const matches = await this.findMatchingJobs(resumeId, topK, filter || {});
-      
-      // 步骤 6: 返回最终结果
-      const updatedResume = await resumePrisma.resume.findUnique({
-        where: { id: resumeId }
+      // 步骤 5: 获取原始岗位数据（不包含向量）
+      const jobIds = matches.map(match => match.job.id);
+      const rawJobsData = await jobsPrisma.job_posting.findMany({
+        where: { topic_id: { in: jobIds.map(id => BigInt(id)) } }
       });
       
+      // 按照匹配分数排序原始岗位数据
+      const sortedRawJobs = jobIds.map(id => 
+        rawJobsData.find(job => job.topic_id.toString() === id)
+      ).filter(Boolean);
+      
+      // 更新简历状态为已匹配
+      await resumePrisma.resume.update({
+        where: { id: resumeId },
+        data: { status: 'matched' }
+      });
+      
+      // 清理matches中的向量数据
+      const cleanedMatches = matches.map(match => ({
+        ...match,
+        job: {
+          ...match.job,
+          vector: undefined, // 移除向量数据
+          embedding: undefined // 移除embedding数据
+        }
+      }));
+      
       return {
-        resumeData: updatedResume as Resume,
-        matches
+        resumeData: resumeForProcessing,
+        matches: cleanedMatches,
+        rawJobsData: sortedRawJobs
       };
     } catch (error) {
-      console.error(`处理简历 ${resumeId} 失败:`, error);
+      console.error(`处理简历 ${resumeId} 并查找匹配岗位失败:`, error);
       throw error;
     }
   },
@@ -1023,8 +1029,8 @@ export const ragService = {
         title: job.position_name,
         description: job.content || '',
         companyName: job.company || undefined,
-        responsibilities: job.content2 || undefined,
-        requirements: job.content3 || undefined,
+        responsibilities: job.content || '',
+        requirements: job.content2 || '',
         salaryRange: job.min_salary && job.max_salary ? 
           `${job.min_salary}-${job.max_salary}` : undefined,
         location: job.location || undefined,

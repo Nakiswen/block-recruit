@@ -94,8 +94,25 @@
           "description": {
             "type": "string"
           },
+          "responsibilities": {
+            "type": "string",
+            "description": "职位职责描述"
+          },
           "requirements": {
-            "type": "string"
+            "type": "string",
+            "description": "职位要求"
+          },
+          "benefits": {
+            "type": "string",
+            "description": "福利待遇"
+          },
+          "companyIntroduction": {
+            "type": "string",
+            "description": "公司介绍"
+          },
+          "companyWebsite": {
+            "type": "string",
+            "description": "公司网站"
           },
           "location": {
             "type": "string"
@@ -512,8 +529,14 @@
           }
         },
         "responses": {
-          "201": {
-            "description": "上传成功，返回简历ID和匹配的岗位列表"
+          "202": {
+            "description": "上传成功，返回简历ID，后台异步处理"
+          },
+          "400": {
+            "description": "文件格式错误或内容无效"
+          },
+          "401": {
+            "description": "用户未授权"
           }
         }
       }
@@ -591,6 +614,58 @@
         "responses": {
           "200": {
             "description": "返回匹配的岗位列表数据"
+          }
+        }
+      }
+    },
+    "/resumes/{resumeId}/progress": {
+      "get": {
+        "summary": "获取简历处理进度",
+        "tags": [
+          "简历"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resumeId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回处理进度和结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "progress": {
+                      "type": "number",
+                      "description": "处理进度百分比(0-100)"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "processing",
+                        "done",
+                        "failed"
+                      ],
+                      "description": "处理状态"
+                    },
+                    "jobs": {
+                      "type": "array",
+                      "description": "匹配的岗位列表(仅在status为done时返回)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "简历不存在"
           }
         }
       }

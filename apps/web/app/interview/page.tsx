@@ -42,7 +42,7 @@ export default function Interview() {
   const [answers, setAnswers] = useState<string[]>([]);
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [isInterviewComplete, setIsInterviewComplete] = useState(false);
-  const [feedback, setFeedback] = useState<any>(null);
+  const [feedback, setFeedback] = useState<Record<string, unknown> | null>(null);
   const [feedbackTimer, setFeedbackTimer] = useState<NodeJS.Timeout | null>(null);
 
   // 获取当前职位的问题列表
@@ -76,7 +76,7 @@ export default function Interview() {
 
 
   // 模拟生成面试反馈
-  const generateFeedback = useCallback((finalAnswers: string[]) => {
+  const generateFeedback = useCallback(() => {
     // 在实际应用中，这里会调用AI服务来分析答案并生成反馈
     const timer = setTimeout(() => {
       // 模拟反馈数据
@@ -114,7 +114,7 @@ export default function Interview() {
       } else {
         // 面试完成，生成反馈
         setIsInterviewComplete(true);
-        generateFeedback(newAnswers);
+        generateFeedback();
       }
     }
   }, [answers, currentAnswer, currentQuestion, questions.length, generateFeedback]);
@@ -159,8 +159,9 @@ export default function Interview() {
         <Card title="开始面试">
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">选择面试职位</label>
+              <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-1">选择面试职位</label>
               <select
+                id="position"
                 className="web3-select w-full"
                 value={position}
                 onChange={handlePositionChange}
@@ -200,14 +201,14 @@ export default function Interview() {
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2">总体评分</h4>
                     <div className="flex items-baseline">
-                      <span className="text-2xl font-bold text-primary-600">{feedback.overallScore.toFixed(1)}/10</span>
+                      <span className="text-2xl font-bold text-primary-600">{(feedback.overallScore as number).toFixed(1)}/10</span>
                     </div>
                     
                     <div className="mt-6 flex items-center bg-green-100 text-green-800 px-4 py-3 rounded">
                       <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      <span className="font-medium">{feedback.recommendation}</span>
+                      <span className="font-medium">{feedback.recommendation as string}</span>
                     </div>
                   </div>
                   
@@ -218,9 +219,9 @@ export default function Interview() {
                         <span className="text-sm text-gray-600">技术知识</span>
                         <div className="flex items-center">
                           <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${feedback.technicalKnowledge * 10}%` }}></div>
+                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(feedback.technicalKnowledge as number) * 10}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{feedback.technicalKnowledge.toFixed(1)}</span>
+                          <span className="text-sm font-medium">{(feedback.technicalKnowledge as number).toFixed(1)}</span>
                         </div>
                       </div>
                       
@@ -228,9 +229,9 @@ export default function Interview() {
                         <span className="text-sm text-gray-600">问题解决能力</span>
                         <div className="flex items-center">
                           <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${feedback.problemSolving * 10}%` }}></div>
+                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(feedback.problemSolving as number) * 10}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{feedback.problemSolving.toFixed(1)}</span>
+                          <span className="text-sm font-medium">{(feedback.problemSolving as number).toFixed(1)}</span>
                         </div>
                       </div>
                       
@@ -238,9 +239,9 @@ export default function Interview() {
                         <span className="text-sm text-gray-600">沟通表达能力</span>
                         <div className="flex items-center">
                           <div className="w-48 bg-gray-200 rounded-full h-2.5 mr-2">
-                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${feedback.communication * 10}%` }}></div>
+                            <div className="bg-primary-600 h-2.5 rounded-full" style={{ width: `${(feedback.communication as number) * 10}%` }}></div>
                           </div>
-                          <span className="text-sm font-medium">{feedback.communication.toFixed(1)}</span>
+                          <span className="text-sm font-medium">{(feedback.communication as number).toFixed(1)}</span>
                         </div>
                       </div>
                     </div>
@@ -250,98 +251,99 @@ export default function Interview() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2">优势</h4>
-                    <ul className="list-disc list-inside text-gray-700 space-y-1">
-                      {feedback.strengths.map((strength: string, i: number) => (
-                        <li key={i} className="text-sm">{strength}</li>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600">
+                      {(feedback.strengths as string[]).map((strength, index) => (
+                        <li key={index}>{strength}</li>
                       ))}
                     </ul>
                   </div>
                   
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2">改进建议</h4>
-                    <ul className="list-disc list-inside text-gray-700 space-y-1">
-                      {feedback.improvements.map((improvement: string, i: number) => (
-                        <li key={i} className="text-sm">{improvement}</li>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600">
+                      {(feedback.improvements as string[]).map((improvement, index) => (
+                        <li key={index}>{improvement}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
                 
-                <div className="mt-6 pt-6 border-t border-gray-200">
-                  <h4 className="font-medium text-gray-700 mb-2">问题与回答</h4>
-                  <div className="space-y-4">
-                    {questions.map((question, i) => (
-                      <div key={i} className="p-4 bg-gray-50 rounded">
-                        <p className="font-medium text-gray-800">{i + 1}. {question}</p>
-                        <p className="mt-2 text-gray-600">{answers[i]}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
                 <div className="mt-6 flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={handleReturnToHome}
-                    className="btn-outline"
-                  >
-                    返回选择
+                  <Button onClick={resetProcess} variant="outline">
+                    重新开始
                   </Button>
-                  <Button
-                    onClick={resetProcess}
-                    className="btn-primary"
-                  >
-                    再次面试
+                  <Button onClick={handleReturnToHome}>
+                    返回首页
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
-                <p className="mt-4 text-gray-600">正在生成面试评估报告...</p>
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-600"></div>
+                <p className="mt-4 text-gray-600">正在生成面试评估...</p>
               </div>
             )}
           </Card>
+          
+          <Card title="您的回答">
+            <div className="space-y-6">
+              {questions.map((question, index) => (
+                <div key={index} className="border-b border-gray-200 pb-4 last:border-0">
+                  <h4 className="font-medium text-gray-900 mb-2">问题 {index + 1}：{question}</h4>
+                  <p className="text-gray-700 whitespace-pre-line">{answers[index] || '未回答'}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       ) : (
-        // 进行中的面试
+        // 面试进行中
         <div className="space-y-8">
-          <Card>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold gradient-text-secondary">
-                {position || 'Web3'} 面试
-              </h2>
-              <div className="text-sm font-medium text-gray-500">
-                问题 {currentQuestion + 1} / {questions.length}
+          <Card title={`问题 ${currentQuestion + 1}/${questions.length}`} subtitle={position || '智能面试'}>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">{questions[currentQuestion]}</h3>
+                
+                <div>
+                  <label htmlFor="answer" className="block text-sm font-medium text-gray-700 mb-1">
+                    您的回答
+                  </label>
+                  <textarea
+                    id="answer"
+                    rows={8}
+                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="请在此输入您的回答..."
+                    value={currentAnswer}
+                    onChange={handleAnswerChange}
+                  ></textarea>
+                </div>
               </div>
-            </div>
-            
-            <div className="mb-8">
-              <h3 className="text-lg font-medium mb-4">{questions[currentQuestion]}</h3>
-              <textarea
-                className="web3-textarea w-full h-48"
-                placeholder="在这里输入您的回答..."
-                value={currentAnswer}
-                onChange={handleAnswerChange}
-              ></textarea>
-            </div>
-            
-            <div className="mt-4 space-x-4 flex justify-between">
-              <Button
-                variant="outline"
-                onClick={goToPreviousQuestion}
-                disabled={currentQuestion === 0}
-                className="btn-outline"
-              >
-                上一题
-              </Button>
-              <Button
-                onClick={submitAnswer}
-                disabled={!currentAnswer.trim()}
-                className="btn-primary"
-              >
-                {currentQuestion < questions.length - 1 ? '下一题' : '完成面试'}
-              </Button>
+              
+              <div className="flex justify-between">
+                <Button 
+                  onClick={goToPreviousQuestion} 
+                  disabled={currentQuestion === 0}
+                  variant="outline"
+                >
+                  上一题
+                </Button>
+                <Button onClick={submitAnswer}>
+                  {currentQuestion < questions.length - 1 ? '下一题' : '完成面试'}
+                </Button>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>已完成 {currentQuestion}/{questions.length} 题</span>
+                  <span>剩余 {questions.length - currentQuestion} 题</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                  <div 
+                    className="bg-primary-600 h-2.5 rounded-full" 
+                    style={{ width: `${(currentQuestion / questions.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
             </div>
           </Card>
         </div>

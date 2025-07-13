@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Card, ResumeUpload, Button } from 'ui';
-import JobRequirementForm from '../../components/JobRequirementForm';
-import ResumeEvaluationResult from '../../components/ResumeEvaluationResult';
-import ResumeAIParser from '../../components/ResumeAIParser';
+import React, { useState, useCallback, useEffect } from 'react';
 import { parseResume, aiParserFunction, ResumeData } from 'resume-parser';
+import { Card, ResumeUpload, Button } from 'ui';
+
+import JobRequirementForm from '../../components/JobRequirementForm';
+import ResumeAIParser from '../../components/ResumeAIParser';
+import ResumeEvaluationResult from '../../components/ResumeEvaluationResult';
 
 // 职位要求的默认选项
 const defaultJobPositions = [
@@ -95,13 +96,13 @@ export default function ResumeScreening() {
   });
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationResult, setEvaluationResult] = useState<UIEvaluationResult | null>(null);
-  const [evaluationTimer, setEvaluationTimer] = useState<NodeJS.Timeout | null>(null);
+  const [evaluationTimer] = useState<NodeJS.Timeout | null>(null);
   const [useAI, setUseAI] = useState<boolean>(false);
   const [parsedResumeData, setParsedResumeData] = useState<ResumeData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [evaluationProgress, setEvaluationProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [evaluatingErrorMessage, setErrorMessage] = useState<string | null>(null);
+  const [, setEvaluationProgress] = useState(0);
+  const [, setStatusMessage] = useState('');
+  const [, setErrorMessage] = useState<string | null>(null);
 
   // 清理定时器，防止内存泄露
   useEffect(() => {
@@ -272,13 +273,6 @@ export default function ResumeScreening() {
     });
   }, []);
 
-  // 切换解析模式
-  const toggleParseMode = useCallback(() => {
-    setUseAI(!useAI);
-    setParsedResumeData(null);
-    setError(null);
-  }, [useAI]);
-
   return (
     <div className="max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold mb-8 text-center gradient-text">Web3简历筛选</h1>
@@ -429,72 +423,3 @@ export default function ResumeScreening() {
     </div>
   );
 }
-
-// 辅助函数：计算总体分数
-function calculateOverallScore(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  // 简单实现，实际逻辑可以更复杂
-  return 7.5; // 暂时返回固定值
-}
-
-// 辅助函数：计算技能匹配分数
-function calculateSkillScore(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  // 根据技能匹配度计算分数
-  return 8.0; // 暂时返回固定值
-}
-
-// 辅助函数：计算经验匹配分数
-function calculateExperienceScore(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  // 根据经验匹配度计算分数
-  return 7.5; // 暂时返回固定值
-}
-
-// 辅助函数：确定技能类别
-function determineSkillCategory(skill: string) {
-  // 实际实现应该参考KAG知识库
-  const categories = ['blockchain', 'smart_contract', 'defi', 'nft', 'dao', 'layer2', 'web3_frontend', 'web3_backend'];
-  return categories[Math.floor(Math.random() * categories.length)];
-}
-
-// 辅助函数：确定技能级别
-function determineSkillLevel(): 'beginner' | 'intermediate' | 'expert' {
-  const levels: Array<'beginner' | 'intermediate' | 'expert'> = ['beginner', 'intermediate', 'expert'];
-  return levels[Math.floor(Math.random() * levels.length)];
-}
-
-// 辅助函数：计算工作持续时间（月数）
-function calculateDuration(startDate: string, endDate: string) {
-  // 简单实现，未考虑复杂日期格式
-  return 18; // 暂时返回固定值
-}
-
-// 辅助函数：判断工作经验是否与Web3相关
-function isWeb3Related(description: string) {
-  // 检查描述中是否包含Web3相关关键词
-  const keywords = ['区块链', '智能合约', '以太坊', 'web3', 'blockchain', 'ethereum', 'solidity'];
-  return keywords.some(keyword => description.toLowerCase().includes(keyword.toLowerCase()));
-}
-
-// 辅助函数：生成优势列表
-function generateStrengths(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  return [
-    '技术栈与岗位需求高度匹配',
-    '具有相关行业经验',
-    '掌握关键技能和工具'
-  ];
-}
-
-// 辅助函数：生成劣势列表
-function generateWeaknesses(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  return [
-    '相关经验年限较短',
-    '缺少某些特定技能'
-  ];
-}
-
-// 辅助函数：生成建议列表
-function generateRecommendations(resumeData: ResumeData, jobRequirements: JobRequirements) {
-  return [
-    '加强特定领域的技术深度',
-    '获取更多实际项目经验'
-  ];
-} 

@@ -5,6 +5,8 @@ import { aiService } from '@/services/ai/aiService';
 import type { Resume } from '@/prisma/web3cv';
 import type { job_posting } from '@/prisma/web3jobs';
 import type { EnhancedMatch, EnhancedMatchForResume } from '@/services/rag/types';
+import { getRealResumeId, getRealResumeIdAsync } from '@/utils/resumeIdMap';
+import redis from '@/utils/redis';
 
 // 定义业务错误类型
 export class BusinessError extends Error {
@@ -162,14 +164,14 @@ export async function vectorizeResume(resumeId: string): Promise<Resume> {
 }
 
 /**
- * 上传简历并启动异步处理流程
- * 此方法只上传和存储原始内容，不执行解析和向量化
+ * 上传简历并启动异步处理流程 - 完全异步版本
+ * 立即返回临时ID，后台异步完成所有处理
  * @param userId 用户ID
  * @param content 简历内容
  * @param fileName 文件名
  * @param fileType 文件类型
  * @param fileSize 文件大小
- * @returns 简历ID
+ * @returns 临时简历ID
  */
 export async function createResumeAndProcessAsync(
   userId: string,
@@ -178,14 +180,65 @@ export async function createResumeAndProcessAsync(
   fileType?: string, 
   fileSize?: number
 ): Promise<string> {
-  // 仅创建简历记录
-  const resumeId = await uploadResume(userId, content, fileName, fileType, fileSize);
+  // 生成临时ID
+  const tempResumeId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  // 在实际项目中，这里应该发送到消息队列进行异步处理
-  // 例如: await messageQueue.add('parseResume', { resumeId });
+  // 启动完全异步的处理流程
+  processResumeCompletelyAsync(tempResumeId, userId, content, fileName, fileType, fileSize).catch(error => {
+    console.error(`异步处理简历 ${tempResumeId} 失败:`, error);
+  });
   
-  // 这里只返回ID，不等待处理完成
-  return resumeId;
+  return tempResumeId;
+}
+
+/**
+ * 完全异步处理简历的完整流程
+ * @param tempResumeId 临时简历ID
+ * @param userId 用户ID
+ * @param content 简历内容
+ * @param fileName 文件名
+ * @param fileType 文件类型
+ * @param fileSize 文件大小
+ */
+async function processResumeCompletelyAsync(
+  tempResumeId: string,
+  userId: string,
+  content: string,
+  fileName?: string,
+  fileType?: string,
+  fileSize?: number
+): Promise<void> {
+  try {
+    console.log(`🔄 开始完全异步处理简历 ${tempResumeId}`);
+    
+    // 步骤1: 异步保存到数据库
+    const resumeId = await uploadResume(userId, content, fileName, fileType, fileSize);
+    console.log(`✅ 简历 ${tempResumeId} 已保存到数据库，真实ID: ${resumeId}`);
+    
+    // 步骤2: 异步解析简历
+    await parseResume(resumeId);
+    console.log(`✅ 简历 ${resumeId} 解析完成`);
+    
+    // 步骤3: 异步向量化简历
+    await vectorizeResume(resumeId);
+    console.log(`✅ 简历 ${resumeId} 向量化完成`);
+  
+    // 步骤4: 异步执行岗位匹配
+    const matches = await getMatchedJobsForResume(resumeId);
+    console.log(`✅ 简历 ${resumeId} 匹配完成，找到 ${matches.length} 个岗位`);
+    
+    // 更新状态为已匹配
+    await resumesModel.updateResumeStatus(resumeId, 'matched');
+    
+    console.log(`🎉 简历 ${resumeId} 完全异步处理完成`);
+  } catch (error) {
+    console.error(`❌ 简历 ${tempResumeId} 完全异步处理失败:`, error);
+    
+    // 根据错误类型更新状态（如果有真实resumeId）
+    if (error instanceof BusinessError && error.code !== 'RESUME_NOT_FOUND') {
+      // 这里需要根据实际情况处理错误状态更新
+    }
+  }
 }
 
 /**
@@ -207,6 +260,7 @@ export async function createResumeAndMatchJobs(
   parseResult?: Resume;
   vectorizeResult?: Resume;
   matches?: EnhancedMatch[];
+  rawJobsData?: any[];
 }> {
   // 步骤 1: 创建简历记录
   const resumeId = await uploadResume(userId, content, fileName, fileType, fileSize);
@@ -223,7 +277,8 @@ export async function createResumeAndMatchJobs(
       resumeId,
       parseResult: processResult.resumeData as unknown as Resume,
       vectorizeResult: processResult.resumeData as unknown as Resume,
-      matches: processResult.matches
+      matches: processResult.matches || [],
+      rawJobsData: processResult.rawJobsData || []
     };
   } catch (error) {
     console.error(`处理简历 ${resumeId} 失败:`, error);
@@ -248,15 +303,45 @@ export async function getMatchedJobsForResume(
     experienceYears?: number;
   } = {}
 ): Promise<EnhancedMatch[]> {
+  // 生成缓存键，包含过滤条件
+  const filterString = JSON.stringify(filters);
+  const cacheKey = `resume:match:${resumeId}:${filterString}`;
+  
+  // 1. 先查Redis缓存
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    console.log(`✅ 从缓存获取简历 ${resumeId} 的匹配岗位`);
+    return JSON.parse(cached);
+  }
+
+  // 2. 没有缓存才调用 RAG服务 匹配岗位
   // 验证简历是否存在
   const resume: Resume | null = await resumesModel.getResumeById(resumeId);
   if (!resume) {
     throw new Error('简历不存在');
   }
   
+  console.log(`🔍 为简历 ${resumeId} 查找匹配岗位`);
   // 调用RAG服务查找匹配的岗位，默认返回最多10条结果
   const topK = 10;
-  return await ragService.findMatchingJobs(resumeId, topK, filters);
+  const matches = await ragService.findMatchingJobs(resumeId, topK, filters);
+  
+  // 确保返回的是岗位原始业务数据而非embedding数据
+  // 过滤掉不需要的向量数据，减小缓存体积
+  const cleanedMatches = matches.map(match => ({
+    ...match,
+    job: {
+      ...match.job,
+      vector: undefined, // 移除向量数据
+      embedding: undefined // 移除embedding数据
+    }
+  }));
+
+  // 3. 写入Redis缓存，设置过期时间（1小时）
+  await redis.set(cacheKey, JSON.stringify(cleanedMatches), 'EX', 3600);
+  console.log(`💾 缓存简历 ${resumeId} 的匹配岗位结果，有效期1小时`);
+
+  return cleanedMatches;
 }
 
 /**
@@ -305,4 +390,104 @@ export async function getEnhancedMatchForPair(
     console.error(`为简历 ${resumeId} 和岗位 ${jobId} 的增强匹配分析失败:`, error);
     throw error;
   }
+}
+
+/**
+ * 获取简历处理进度
+ * @param resumeId 简历ID（可能是临时ID）
+ * @returns 处理进度信息
+ */
+export async function getResumeProgress(resumeId: string): Promise<{
+  progress: number;
+  status: 'processing' | 'done' | 'failed';
+  jobs?: any[];
+}> {
+  console.log(`🔍 获取简历 ${resumeId} 的处理进度`);
+  
+  // 如果是临时ID，需要特殊处理
+  if (resumeId.startsWith('temp_')) {
+    // 使用异步方法获取真实ID
+    const realId = await getRealResumeIdAsync(resumeId);
+    if (!realId) {
+      // 还没处理完，继续返回processing
+      console.log(`⏳ 临时ID ${resumeId} 尚未关联到真实ID，返回初始进度`);
+      return {
+        progress: 10, // 临时ID表示刚开始处理
+        status: 'processing'
+      };
+    }
+    console.log(`✅ 临时ID ${resumeId} 已关联到真实ID ${realId}，递归查询进度`);
+    // 已有真实ID，递归查真实ID的进度
+    return getResumeProgress(realId);
+  }
+
+  // 获取简历信息
+  const resume = await resumesModel.getResumeById(resumeId);
+  if (!resume) {
+    console.log(`❌ 简历 ${resumeId} 不存在`);
+    throw new BusinessError(`简历 ${resumeId} 不存在`, 'RESUME_NOT_FOUND');
+  }
+
+  console.log(`📊 简历 ${resumeId} 当前状态: ${resume.status}`);
+
+  // 根据简历状态计算进度
+  let progress = 0;
+  let status: 'processing' | 'done' | 'failed' = 'processing';
+
+  switch (resume.status) {
+    case 'created':
+      progress = 10;
+      break;
+    case 'parsed':
+      progress = 40;
+      break;
+    case 'vectorized':
+      progress = 70;
+      break;
+    case 'matched':
+      progress = 100;
+      status = 'done';
+      break;
+    case 'parse_failed':
+    case 'vectorize_failed':
+    case 'match_failed':
+    case 'process_failed':
+      progress = 0;
+      status = 'failed';
+      break;
+    default:
+      progress = 0;
+  }
+
+  // 如果处理完成，获取匹配的岗位
+  let jobs: any[] = [];
+  if (status === 'done') {
+    try {
+      console.log(`🔍 简历 ${resumeId} 已处理完成，获取匹配岗位`);
+      
+      // 先尝试从缓存获取匹配结果
+      const cacheKey = `resume:match:${resumeId}:{}`;
+      const cached = await redis.get(cacheKey);
+      
+      if (cached) {
+        console.log(`✅ 从缓存获取简历 ${resumeId} 的匹配岗位`);
+        jobs = JSON.parse(cached);
+      } else {
+        // 缓存不存在，重新获取匹配结果
+        console.log(`🔄 缓存未命中，重新获取简历 ${resumeId} 的匹配岗位`);
+        jobs = await getMatchedJobsForResume(resumeId);
+      }
+      
+      console.log(`✅ 简历 ${resumeId} 匹配到 ${jobs.length} 个岗位`);
+    } catch (error) {
+      console.error(`❌ 获取简历 ${resumeId} 匹配岗位失败:`, error);
+      // 即使获取岗位失败，也不影响进度返回
+    }
+  }
+
+  return {
+    progress,
+    status,
+    jobs: status === 'done' ? jobs : undefined
+  };
 } 

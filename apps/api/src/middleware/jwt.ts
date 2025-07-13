@@ -30,7 +30,6 @@ export async function jwtAuth(ctx: Context, next: Next) {
   try {
     // 验证token
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    console.log("JWT验证成功，载荷:", payload);
     
     // 确保payload包含address
     if (!payload.address) {
@@ -63,7 +62,6 @@ export async function jwtAuth(ctx: Context, next: Next) {
     // 记录认证成功的用户信息
     const userId = ctx.state.user.userId || '未知';
     const address = ctx.state.user.address;
-    console.log(`已授权用户: ID=${userId}, 地址=${address}`);
     
     await next();
   } catch (err) {

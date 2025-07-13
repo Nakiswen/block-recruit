@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useAtom } from 'jotai';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from 'ui';
-import Link from 'next/link';
-import Image from 'next/image';
-import { jobServices, resumeServices, nftServices, Job, NFTAchievement, applicationServices, userServices } from '../lib/api';
-import api from '../lib/api';
+
+import api, { resumeServices, nftServices, Job, applicationServices, userServices, User } from '../lib/api';
+import { matchedJobsAtom, currentResumeIdAtom, resumeProcessingStatusAtom } from '../store/matchedJobsAtom';
+import { pollWithInterval, HybridProgressManager } from '../utils';
+
 
 // 定义NFT类型
 interface NFT {
@@ -25,7 +28,7 @@ const PRODUCT_FEATURES = [
     id: 'feature-1',
     title: '智能岗位匹配',
     description: '基于AI分析您的简历与Web3岗位需求，提供精准匹配推荐',
-    icon: '��',
+    icon: '🔍',
   },
   {
     id: 'feature-2',
@@ -103,16 +106,23 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [matchingProgress, setMatchingProgress] = useState(0);
-  const [matchedJobs, setMatchedJobs] = useState<Job[]>([]);
+  const [matchedJobs, setMatchedJobsAtom] = useAtom(matchedJobsAtom);
   const [userNFTs, setUserNFTs] = useState<NFT[]>([]);
   const [activePage, setActivePage] = useState('home');
   const [activeSection, setActiveSection] = useState('');
-  const [expandedState, setExpandedState] = useState<Record<string, boolean>>({});
-  const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
   const [matchingStarted, setMatchingStarted] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedState, setExpandedState] = useState<Record<string, boolean>>({});
+  const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
+  
+  const fallbackCountRef = useRef(0);
+  
+  const [, setCurrentResumeId] = useAtom(currentResumeIdAtom);
+  const [, setResumeProcessingStatus] = useAtom(resumeProcessingStatusAtom);
+  
+  const router = useRouter();
   
   // 获取用户NFT证明
   const fetchUserNFTs = useCallback(async (userId: string) => {
@@ -121,8 +131,8 @@ export default function Home() {
       if (nftsData && Array.isArray(nftsData)) {
         setUserNFTs(nftsData);
       }
-    } catch (error) {
-      console.error('获取用户NFT失败:', error);
+    } catch (err) {
+      // 静默处理错误
     }
   }, []);
   
@@ -136,48 +146,107 @@ export default function Home() {
       if (userData && userData.id) {
         fetchUserNFTs(userData.id);
       }
-    } catch (error) {
-      console.warn('获取用户信息失败 (可能API未启动或未登录):', error);
+    } catch (err) {
       // 静默失败，不影响用户体验
     }
   }, [fetchUserNFTs]);
   
+  // 轮询后端进度接口，混合进度条方案
   useEffect(() => {
-    if (resumeUploaded && matchingStarted && matchingProgress < 100) {
+    if (resumeUploaded && matchingStarted && resumeId) {
       setIsLoading(true);
-      
-      // 如果有resumeId，则获取匹配的岗位
-      if (resumeId) {
-        const timer = setTimeout(async () => {
-          try {
-            // 显示进度
-            setMatchingProgress(50);
-            
-            // 调用匹配API
-            const matchResult = await resumeServices.matchResume();
-            setMatchingProgress(80);
-            
-            // 获取匹配的岗位列表
-            const matchedJobsData = await resumeServices.getMatchingJobs(resumeId);
-            setMatchedJobs(matchedJobsData);
-            setMatchingProgress(100);
-          } catch (error) {
-            console.error('获取匹配岗位失败:', error);
-            setUploadError('岗位匹配过程中出现错误，请重试');
-          } finally {
-            setIsLoading(false);
+
+      // 创建混合进度条管理器
+      const progressManager = new HybridProgressManager(
+        (progress) => setMatchingProgress(progress)
+      );
+
+      // 开始伪进度增长
+      progressManager.startFakeProgress(90, 200);
+
+      // 轮询后端进度
+      const pollProgress = async () => {
+        try {
+          const result = await pollWithInterval(
+            () => api.get(`/resumes/${resumeId}/progress`),
+            (res) => {
+              return res.data.status === 'done';
+            },
+            2000,
+            90000 // 1.5分钟超时
+          );
+          const { progress, status, jobs } = result.data;
+          
+          // 更新全局状态
+          setResumeProcessingStatus({
+            progress: progress || 0,
+            status: status || 'processing'
+          });
+          
+          // 更新真实进度
+          if (typeof progress === 'number') {
+            progressManager.updateRealProgress(progress);
           }
-        }, 1000);
-        
-        return () => clearTimeout(timer);
-      } else {
-        // 没有resumeId，无法匹配
-        setMatchingProgress(100);
-        setUploadError('未找到简历ID，无法进行匹配');
-        setIsLoading(false);
-      }
+          
+          if (status === 'done') {
+            progressManager.complete(100);
+            setIsLoading(false);
+            
+            // 获取岗位数据
+            if (jobs && Array.isArray(jobs) && jobs.length > 0) {
+              setMatchedJobsAtom(jobs); // 存到全局
+              setCurrentResumeId(resumeId); // 保存简历ID到全局
+            } else {
+              // 兜底再拉一次岗位
+              if (fallbackCountRef.current < 2) {
+                try {
+                  const matchedJobsData = await resumeServices.getMatchingJobs(resumeId);
+                  if (matchedJobsData && matchedJobsData.length > 0) {
+                    progressManager.complete(100);
+                    setIsLoading(false);
+                    setMatchedJobsAtom(matchedJobsData);
+                    setCurrentResumeId(resumeId);
+                  }
+                  fallbackCountRef.current += 1;
+                } catch (e) {
+                  setUploadError('岗位匹配结果获取失败，请稍后重试');
+                  fallbackCountRef.current += 1;
+                }
+              }
+            }
+          } else if (status === 'failed') {
+            setIsLoading(false);
+            setUploadError('简历处理失败，请重试或联系客服');
+          }
+        } catch (err) {
+          // 网络/接口异常时，继续用伪进度
+          
+          // 如果多次失败，尝试直接获取匹配结果
+          if (fallbackCountRef.current < 2) {
+            try {
+              const matchedJobsData = await resumeServices.getMatchingJobs(resumeId);
+              if (matchedJobsData && matchedJobsData.length > 0) {
+                progressManager.complete(100);
+                setIsLoading(false);
+                setMatchedJobsAtom(matchedJobsData);
+                setCurrentResumeId(resumeId);
+              }
+              fallbackCountRef.current += 1;
+            } catch (e) {
+              fallbackCountRef.current += 1;
+            }
+          }
+        }
+      };
+
+      // 只调用一次pollProgress，pollWithInterval内部已经实现了轮询逻辑
+      pollProgress();
+
+      return () => {
+        progressManager.cleanup();
+      };
     }
-  }, [resumeUploaded, matchingStarted, resumeId, matchingProgress]);
+  }, [resumeUploaded, matchingStarted, resumeId, setMatchedJobsAtom, setCurrentResumeId, setResumeProcessingStatus]);
   
   // 修复useEffect依赖问题
   useEffect(() => {
@@ -309,7 +378,7 @@ export default function Home() {
       const file = files[0];
       
       // 检查文件类型
-      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'text/markdown', 'text/x-markdown'];
       if (!validTypes.includes(file.type)) {
         setUploadError("请上传PDF或Word格式的简历");
         return;
@@ -339,30 +408,23 @@ export default function Home() {
       // 调用API上传简历
       const response = await resumeServices.uploadResume(resumeFile);
       
-      // 保存resumeId
-      if (response && response.id) {
-        setResumeId(response.id);
-        localStorage.setItem('resumeId', response.id);
+      // 上传成功
+      if (response && response.resumeId) {
+        setResumeId(response.resumeId);
+        setResumeUploaded(true);
+        setMatchingStarted(true);
       }
       
       // 上传成功
-      setResumeUploaded(true);
       setIsUploading(false);
-      
-      // 设置开始匹配标志
-      setMatchingStarted(true);
-      
-      // 保存简历已上传的状态
-      localStorage.setItem('resumeUploaded', 'true');
       
       // 触发自定义事件
       const event = new CustomEvent('resumeUploaded', { 
-        detail: { uploaded: true, resumeId: response?.id } 
+        detail: { uploaded: true, resumeId: response?.resumeId } 
       });
       document.dispatchEvent(event);
       
-    } catch (error) {
-      console.error('简历上传失败:', error);
+    } catch (err) {
       setUploadError("上传失败，请重试");
       setIsUploading(false);
     }
@@ -391,8 +453,7 @@ export default function Home() {
         setTimeout(() => {
           setAppliedJobId(null);
         }, 3000);
-      } catch (error) {
-        console.error('岗位申请失败:', error);
+      } catch (err) {
         setUploadError("岗位申请失败，请重试");
       }
     };
@@ -416,93 +477,15 @@ export default function Home() {
     }));
   };
   
-  // 处理钱包连接 - 只在用户明确点击时发起连接
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      // 检查是否存在以太坊提供程序
-      if (typeof window.ethereum === 'undefined') {
-        setUploadError('未检测到以太坊钱包，请安装MetaMask或其他Web3钱包');
-        return;
-      }
-      
-      // 请求连接钱包
-      const accounts = await (window.ethereum as any).request({ 
-        method: 'eth_requestAccounts' 
-      });
-      
-      if (!accounts || accounts.length === 0) {
-        setUploadError('未能获取钱包地址');
-        return;
-      }
-      
-      // 获取实际钱包地址
-      const address = accounts[0];
-      
-      // 步骤1: 请求登录挑战
-      const challengeResponse = await api.get(`/auth/challenge`, {
-        params: { address }
-      });
-      
-      const { message, nonce } = challengeResponse.data;
-      
-      if (!message || !nonce) {
-        setUploadError('登录挑战数据不完整');
-        return;
-      }
-      
-      console.log('需要签名的消息:', message);
-      
-      // 步骤2: 请求用户签名
-      const signature = await (window.ethereum as any).request({
-        method: 'personal_sign',
-        params: [message, address]
-      });
-      
-      // 步骤3: 验证签名并登录
-      const loginResponse = await api.post('/auth/login', {
-        address,
-        signature,
-        nonce
-      });
-      
-      const { token } = loginResponse.data;
-      
-      // 保存token到localStorage
-      if (token) {
-        localStorage.setItem('token', token);
-        localStorage.setItem('walletAuth', 'true');
-        localStorage.setItem('walletAuthAddress', address);
-        
-        setIsWalletConnected(true);
-        
-        // 触发自定义事件通知状态变化
-        const event = new CustomEvent('walletConnected', { 
-          detail: { connected: true } 
-        });
-        document.dispatchEvent(event);
-        
-        // 触发storage事件
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'walletAuth',
-          newValue: 'true'
-        }));
-      } else {
-        setUploadError('登录失败，未获取到token');
-      }
-    } catch (error) {
-      console.error('钱包连接失败:', error);
-      setUploadError(`钱包连接或登录失败: ${error instanceof Error ? error.message : '未知错误'}`);
-    }
-  }, []);
-
-  // 获取用户信息 - 只在用户明确请求时调用
-  const handleGetUserInfo = useCallback(async () => {
-    try {
-      await fetchUserInfo();
-    } catch (error) {
-      console.warn('获取用户信息失败:', error);
-    }
-  }, [fetchUserInfo]);
+  // 获取用户信息的函数，供组件中调用
+  const handleGetUserInfo = () => {
+    fetchUserInfo();
+  };
+  
+  // 处理钱包连接
+  const handleConnectWallet = () => {
+    // 实现钱包连接逻辑
+  };
   
   // 首页内容
   if (activePage === 'home') {
@@ -826,7 +809,7 @@ export default function Home() {
                         id="resume-upload" 
                         type="file" 
                         className="hidden" 
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
                         onChange={handleFileChange}
                       />
                     </label>
@@ -892,8 +875,7 @@ export default function Home() {
                     size="lg" 
                     className="bg-white text-indigo-600 hover:bg-gray-50"
                     onClick={() => {
-                      // setActivePage('jobs');
-                      window.location.href = '/jobs'; // 跳转到新页面
+                      router.push('/jobs');
                     }}
                   >
                     查看匹配岗位

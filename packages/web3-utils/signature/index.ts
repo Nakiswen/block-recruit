@@ -9,6 +9,7 @@ import { ethers } from 'ethers';
  */
 export async function signMessage(
   message: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   provider: any,
   address: string
 ): Promise<string | { error: string }> {

@@ -2,14 +2,53 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+
 export type Job = {
     id?: string;
     title?: string;
-    company?: string;
+    companyName?: string;
     description?: string;
+    responsibilities?: string;
     requirements?: string;
+    benefits?: string;
+    companyIntroduction?: string;
+    companyWebsite?: string;
     location?: string;
     salary?: string;
     createdAt?: string;
+    similarity?: number;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

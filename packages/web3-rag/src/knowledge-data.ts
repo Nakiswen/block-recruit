@@ -1,5 +1,5 @@
-import { Web3KnowledgeBase, Web3Skill } from './types';
 import { embedText } from './embeddings';
+import { Web3KnowledgeBase, Web3Skill } from './types';
 
 /**
  * Web3知识库预设

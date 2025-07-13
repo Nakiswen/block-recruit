@@ -1,5 +1,5 @@
-import { ethers } from 'ethers';
 import axios from 'axios';
+import { ethers } from 'ethers';
 
 export interface ConnectWalletResult {
   address: string;
@@ -9,7 +9,7 @@ export interface ConnectWalletResult {
 }
 
 // 存储签名
-let _authSignature: string | null = null;
+// let _authSignature: string | null = null;
 // 存储JWT令牌
 let _authToken: string | null = null;
 
@@ -84,7 +84,6 @@ export async function getWalletSignature(address: string, provider?: any): Promi
         });
         
         if (response.data.isValid) {
-          console.log('现有令牌有效，无需重新签名');
           _authToken = token;
           return token; // 返回令牌作为"签名"
         }
@@ -105,7 +104,6 @@ export async function getWalletSignature(address: string, provider?: any): Promi
     const signer = await provider.getSigner(address);
     
     // 步骤1: 请求登录挑战
-    console.log('请求登录挑战...');
     const challengeResponse = await axios.get(`${API_BASE_PATH}/auth/challenge`, {
       params: { address }
     });
@@ -113,15 +111,11 @@ export async function getWalletSignature(address: string, provider?: any): Promi
     const { message, nonce } = challengeResponse.data;
     
     if (!message || !nonce) {
-      throw new Error('登录挑战数据不完整');
     }
     
-    console.log('需要签名的消息:', message);
     
     // 步骤2: 请求用户签名
-    console.log('请求用户签名...');
     const signature = await signer.signMessage(message);
-    console.log('获取签名成功');
     
     // 保存签名数据以便将来静默登录
     localStorage.setItem(`message_${address.toLowerCase()}`, message);
@@ -129,7 +123,6 @@ export async function getWalletSignature(address: string, provider?: any): Promi
     localStorage.setItem(`nonce_${address.toLowerCase()}`, nonce);
     
     // 步骤3: 验证签名并登录
-    console.log('提交登录验证...');
     
     const loginResponse = await axios.post(`${API_BASE_PATH}/auth/login`, {
       address,
@@ -139,7 +132,6 @@ export async function getWalletSignature(address: string, provider?: any): Promi
     
     const { token: newToken } = loginResponse.data;
     token = newToken;
-    console.log('登录成功，获取到token');
     
     // 保存token到localStorage
     if (token) {

@@ -21,8 +21,9 @@ export {
   extractWeb3Skills
 } from './knowledge-data';
 
-import OpenAI from "openai";
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from "openai";
+
 import { mockEmbedding, simplifiedEmbedding } from './embeddings';
 
 /**

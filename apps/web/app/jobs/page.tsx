@@ -1,8 +1,14 @@
 "use client";
 
+import { useAtomValue } from 'jotai';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from "react";
+import ReactMarkdown from 'react-markdown';
 import { Button } from "ui";
-import { jobServices, applicationServices, userServices, Job } from '../../lib/api';
+
+import { jobServices, applicationServices, userServices, User } from '../../lib/api';
+import { Job } from '../../services/api-client';
+import { matchedJobsAtom } from '../../store/matchedJobsAtom';
 
 /**
  * 岗位列表页面
@@ -14,15 +20,15 @@ export default function JobsPage() {
   // 记录已申请的岗位ID
   const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
   // 岗位数据
+  const jotaiJobs = useAtomValue(matchedJobsAtom);
   const [jobs, setJobs] = useState<Job[]>([]);
   // 当前用户
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   // 错误信息
   const [error, setError] = useState<string | null>(null);
-  // 简历ID
-  const [resumeId, setResumeId] = useState<string | null>(null);
+  const router = useRouter();
 
   // 获取用户信息和岗位数据
   useEffect(() => {
@@ -34,27 +40,31 @@ export default function JobsPage() {
         try {
           const userData = await userServices.getCurrentUser();
           setCurrentUser(userData);
-        } catch (error) {
-          console.error('获取用户信息失败:', error);
+        } catch (err) {
+          // 静默处理用户信息获取失败
         }
         
-        // 获取简历ID
+        // 优先用Jotai全局store的岗位数据
+        if (jotaiJobs && jotaiJobs.length > 0) {
+          setJobs(jotaiJobs as Job[]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // 如果有简历ID，尝试获取匹配的岗位
         const storedResumeId = localStorage.getItem('resumeId');
+        
         if (storedResumeId) {
-          setResumeId(storedResumeId);
-          
-          // 如果有简历ID，尝试获取匹配的岗位
           try {
             const matchedJobs = await jobServices.getJobs();
-            setJobs(matchedJobs);
-          } catch (error) {
-            console.error('获取匹配岗位失败:', error);
+            setJobs(matchedJobs as Job[]);
+          } catch (err) {
             setError('获取岗位数据失败，请稍后重试');
             
             // 获取所有岗位作为备选
             try {
               const allJobs = await jobServices.getJobs();
-              setJobs(allJobs);
+              setJobs(allJobs as Job[]);
             } catch (jobsError) {
               setError('获取岗位数据失败，请稍后重试');
             }
@@ -62,10 +72,9 @@ export default function JobsPage() {
         } else {
           // 如果没有简历ID，获取所有岗位
           const allJobs = await jobServices.getJobs();
-          setJobs(allJobs);
+          setJobs(allJobs as Job[]);
         }
-      } catch (error) {
-        console.error('加载数据失败:', error);
+      } catch (err) {
         setError('加载数据失败，请稍后重试');
       } finally {
         setIsLoading(false);
@@ -73,7 +82,7 @@ export default function JobsPage() {
     };
     
     fetchData();
-  }, []);
+  }, [jotaiJobs]);
 
   // 切换岗位详情展开/收起
   const toggleJobExpanded = (jobId: string) => {
@@ -104,8 +113,7 @@ export default function JobsPage() {
       setTimeout(() => {
         setAppliedJobId(null);
       }, 3000);
-    } catch (error) {
-      console.error('岗位申请失败:', error);
+    } catch (err) {
       setError('岗位申请失败，请重试');
     }
   };
@@ -124,7 +132,7 @@ export default function JobsPage() {
       {/* 顶部栏 */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">匹配岗位 ({jobs.length})</h2>
-        <Button variant="outline" onClick={() => window.location.href = "/"}>
+        <Button variant="outline" onClick={() => router.push("/")}>
           返回主页
         </Button>
       </div>
@@ -139,9 +147,17 @@ export default function JobsPage() {
       {/* 岗位列表 */}
       {jobs.length > 0 ? (
         <div className="grid grid-cols-1 gap-6">
-          {jobs.map(job => {
-            const isExpanded = expandedState[job.id] || false;
+          {jobs.map(item => {
+            // 处理不同的数据结构，有些接口返回的是嵌套的job对象，有些直接是job对象
+            const job = 'job' in item ? (item.job as Job) : item as Job;
+            const isExpanded = expandedState[job.id || ''] || false;
             const isApplied = appliedJobId === job.id;
+            
+            // 计算匹配度百分比，确保数值有效
+            const matchPercentage = job.similarity !== undefined && !isNaN(Number(job.similarity))
+              ? (Number(job.similarity) * 100).toFixed(0)
+              : null;
+            
             return (
               <div key={job.id} className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
                 <div className="flex justify-between items-start">
@@ -149,41 +165,87 @@ export default function JobsPage() {
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">{job.title} <span className="text-blue-600 font-medium ml-2">{job.salary}</span></h3>
                     </div>
-                    <p className="text-gray-600">{job.company} · {job.location}</p>
+                    <p className="text-gray-600">{job.companyName} · {job.location}</p>
                   </div>
-                  {job.matchScore && (
+                  {matchPercentage && (
                     <div className="bg-purple-100 text-purple-800 font-medium px-3 py-1 rounded-full text-sm ml-4">
-                      匹配度 {job.matchScore}%
+                      匹配度 {matchPercentage}%
                     </div>
                   )}
                 </div>
 
-                {/* 岗位要求 */}
-                <div className="mt-4 border border-gray-100 rounded-lg p-4 bg-gray-50">
-                  <h4 className="font-medium text-gray-900 mb-2">岗位要求</h4>
-                  <ul className="list-disc list-inside text-gray-700 space-y-1">
-                    {typeof job.requirements === 'string' 
-                      ? job.requirements.split(',').map((req, index) => (
-                          <li key={index}>{req.trim()}</li>
-                        ))
-                      : job.requirements.map((req: string, index: number) => (
-                          <li key={index}>{req}</li>
-                        ))}
-                  </ul>
-                </div>
-
                 {/* 展开后显示详细描述 */}
                 {isExpanded && (
-                  <div className="mt-4 animate-fadeIn">
-                    <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
-                    <p className="text-gray-700">{job.description}</p>
+                  <div className="mt-4 space-y-4 animate-fadeIn">
+                    {/* 公司介绍 */}
+                    {job.companyIntroduction && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">公司介绍</h4>
+                        <div className="prose text-gray-700">
+                          <ReactMarkdown>{job.companyIntroduction}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 职位描述 */}
+                    {job.description && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
+                        <div className="prose text-gray-700">
+                          <ReactMarkdown>{job.description}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 岗位要求 */}
+                    {job.requirements && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">岗位要求</h4>
+                        <div className="prose text-gray-700">
+                          <ReactMarkdown>{job.requirements}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 职责 */}
+                    {job.responsibilities && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">工作职责</h4>
+                        <div className="prose text-gray-700">
+                          <ReactMarkdown>{job.responsibilities}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 福利待遇 */}
+                    {job.benefits && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">福利待遇</h4>
+                        <div className="prose text-gray-700">
+                          <ReactMarkdown>{job.benefits}</ReactMarkdown>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 公司网站 */}
+                    {job.companyWebsite && (
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">公司网站</h4>
+                        <a href={job.companyWebsite} target="_blank" rel="noopener noreferrer" 
+                           className="text-blue-600 hover:underline">
+                          {job.companyWebsite}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div className="mt-6 flex justify-between items-center">
                   <button
                     className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
-                    onClick={() => toggleJobExpanded(job.id)}
+                    onClick={() => toggleJobExpanded(job.id || '')}
+                    aria-expanded={isExpanded}
+                    aria-label={isExpanded ? "收起详情" : "查看详情"}
                   >
                     {isExpanded ? '收起详情' : '查看详情'}
                     <svg
@@ -206,7 +268,7 @@ export default function JobsPage() {
                       </div>
                     )}
                     <Button
-                      onClick={() => handleApplyJob(job.id)}
+                      onClick={() => handleApplyJob(job.id || '')}
                       disabled={isApplied}
                     >
                       {isApplied ? '已申请' : '申请并发送证明'}

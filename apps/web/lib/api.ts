@@ -37,9 +37,13 @@ export interface Job {
   company: string;
   location: string;
   salary: string;
-  matchScore?: number;
+  similarity?: number;
   description: string;
-  requirements: string[] | string;
+  responsibilities: string;
+  requirements: string;
+  benefits?: string;
+  companyIntroduction?: string;
+  companyWebsite?: string;
   createdAt: string;
 }
 

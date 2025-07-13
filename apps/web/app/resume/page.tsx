@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { getAuthHeaders, connectWallet } from '@/packages/web3-utils/wallet'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
 
 export default function ResumePage() {
   const router = useRouter()

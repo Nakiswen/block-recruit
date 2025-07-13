@@ -1,5 +1,5 @@
-import { EmbeddingResult, QueryResult, SkillInfo, Web3KnowledgeBase, Web3Skill, KnowledgeQueryResult } from './types';
 import { embedTextSafe } from './api';
+import { EmbeddingResult, QueryResult, SkillInfo, Web3KnowledgeBase, Web3Skill, KnowledgeQueryResult } from './types';
 import { categorizeWeb3Skill, chunkText, generateId } from './utils';
 
 // 缓存向量嵌入，减少重复计算

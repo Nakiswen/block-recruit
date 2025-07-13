@@ -254,10 +254,11 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">选择职位</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="position-select">选择职位</label>
         <select
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           value={selectedPosition}
+          id="position-select"
           onChange={handlePositionChange}
         >
           <option value="">-- 选择职位 --</option>
@@ -272,8 +273,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
 
       {selectedPosition === 'custom' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">自定义职位名称</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="custom-position-input">自定义职位名称</label>
           <input
+            id="custom-position-input"
             type="text"
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
             value={customPosition}
@@ -286,8 +288,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
       {(selectedPosition || customPosition) && (
         <>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">职位级别</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="level-select">职位级别</label>
             <select
+              id="level-select"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               value={level}
               onChange={handleLevelChange}
@@ -299,8 +302,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">必备技能</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="required-skills-textarea">必备技能</label>
             <textarea
+              id="required-skills-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               rows={3}
               value={requiredSkills}
@@ -321,8 +325,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">加分技能</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="preferred-skills-textarea">加分技能</label>
             <textarea
+              id="preferred-skills-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               rows={3}
               value={preferredSkills}
@@ -343,8 +348,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">最低经验年限</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="experience-years-input">最低经验年限</label>
             <input
+              id="experience-years-input"
               type="number"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               value={experienceYears}
@@ -355,8 +361,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">相关领域经验</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="required-fields-textarea">相关领域经验</label>
             <textarea
+              id="required-fields-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
               rows={3}
               value={requiredFields}

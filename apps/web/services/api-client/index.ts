@@ -1,8 +1,15 @@
-/**
- * API客户端自动生成的索引文件
- * 该文件由generate-api脚本自动生成，请勿手动修改
- */
+/* generated using openapi-typescript-codegen -- do no edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+export { ApiError } from './core/ApiError';
+export { CancelablePromise, CancelError } from './core/CancelablePromise';
+export { OpenAPI } from './core/OpenAPI';
+export type { OpenAPIConfig } from './core/OpenAPI';
 
-export * from './BlockRecruitAPI';
+export type { Job } from './models/Job';
+export type { Resume } from './models/Resume';
+export type { User } from './models/User';
 
-export { default as ApiRequest } from '../api-request';
+export { Service } from './services/Service';
+export { NftService } from './services/NftService';

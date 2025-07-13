@@ -1,12 +1,12 @@
 'use client';
 
 import './globals.css';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
-import { usePathname } from 'next/navigation';
-import { Inter } from 'next/font/google';
 import dynamic from 'next/dynamic';
+import { Inter } from 'next/font/google';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
+import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 // 使用动态导入优化首屏加载性能
 const Navigation = dynamic(

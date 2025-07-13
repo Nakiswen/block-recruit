@@ -3,11 +3,13 @@ import type { File } from '@koa/multer';
 import mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
 import * as resumesService from '@/services/resumesService';
+import * as resumesModel from '@/models/resumesModel';
 import { BusinessError } from '@/services/resumesService';
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import { exec } from 'child_process';
+import { setResumeIdMapping, getRealResumeId } from '@/utils/resumeIdMap';
 
 const execPromise = promisify(exec);
 
@@ -110,11 +112,11 @@ async function extractTextFromFile(file: File): Promise<string> {
 }
 
 /**
- * 控制器：处理简历上传 - 异步处理版
- * 快速响应用户请求，后台异步处理
+ * 控制器：处理简历上传 - 完全异步处理版
+ * 立即返回临时ID，所有处理都在后台进行
  * @param ctx Koa上下文
  */
-export async function uploadResumeAsync(ctx: Context) {
+export async function uploadResume(ctx: Context) {
   const { file } = ctx;
   if (!file) {
     ctx.status = 400;
@@ -130,143 +132,175 @@ export async function uploadResumeAsync(ctx: Context) {
     return;
   }
 
+  // 生成临时ID
+  const tempResumeId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // 立即响应，不等待任何处理
+  ctx.status = 202; // 已接受
+  ctx.body = {
+    message: '简历上传成功，正在后台处理',
+    resumeId: tempResumeId,
+    status: 'processing'
+  };
+
+  // 启动完全异步的处理流程
+  processResumeCompletelyAsync(tempResumeId, userId, file).catch(error => {
+    console.error(`异步处理简历 ${tempResumeId} 失败:`, error);
+  });
+}
+
+/**
+ * 完全异步处理简历的完整流程
+ * @param tempResumeId 临时简历ID
+ * @param userId 用户ID
+ * @param file 上传的文件
+ */
+async function processResumeCompletelyAsync(
+  tempResumeId: string,
+  userId: string,
+  file: File
+): Promise<void> {
   try {
-    // 从上传文件中提取文本
+    console.log(`🔄 开始完全异步处理简历 ${tempResumeId}`);
+
+    // 步骤1: 异步提取文本内容
     const content = await extractTextFromFile(file);
     if (!content.trim()) {
-      ctx.status = 400;
-      ctx.body = { error: '无法从文件中提取有效文本内容' };
+      console.error(`❌ 简历 ${tempResumeId} 无法提取有效文本内容`);
       return;
     }
+    console.log(`✅ 简历 ${tempResumeId} 文本提取完成`);
 
-    // 仅保存简历，获取ID，启动异步处理
-    const resumeId = await resumesService.createResumeAndProcessAsync(
+    // 步骤2: 异步保存到数据库
+    const resumeId = await resumesService.uploadResume(
       userId, 
       content, 
       file.originalname,
       file.mimetype,
       file.size
     );
+    // 保存临时ID和真实ID的映射
+    await setResumeIdMapping(tempResumeId, resumeId);
+    console.log(`✅ 简历 ${tempResumeId} 已保存到数据库，真实ID: ${resumeId}`);
 
-    // 快速响应用户
-    ctx.status = 202; // 已接受
-    ctx.body = {
-      message: '简历上传成功，正在后台处理',
-      resumeId: resumeId,
-      status: 'processing'
-    };
+    // 幂等性判断，只有created状态才继续
+    const resume = await resumesModel.getResumeById(resumeId);
+    if (!resume) {
+      console.error(`❌ 简历 ${resumeId} 不存在，无法继续处理`);
+      return;
+    }
+
+    // 如果已经处理完成，直接返回
+    if (resume.status === 'matched') {
+      console.log(`⏭️ 简历 ${resumeId} 已经处理完成(状态为matched)，无需重复处理`);
+      return;
+    }
+    
+    // 如果状态不是created，但也不是matched，可能是处理中断，尝试继续处理
+    if (resume.status !== 'created') {
+      console.log(`⚠️ 简历 ${resumeId} 状态为 ${resume.status}，可能处理中断，尝试继续处理`);
+    }
+
+    // 步骤3: 异步解析简历
+    let parseSuccess = false;
+    try {
+      if (resume.status === 'created' || resume.status === 'parse_failed') {
+        await resumesService.parseResume(resumeId);
+        console.log(`✅ 简历 ${resumeId} 解析完成`);
+        parseSuccess = true;
+      } else {
+        console.log(`⏭️ 简历 ${resumeId} 已经解析过，跳过解析步骤`);
+        parseSuccess = true;
+      }
+    } catch (parseError) {
+      console.error(`❌ 简历 ${resumeId} 解析失败:`, parseError);
+      // 继续执行后续步骤，不中断流程
+    }
+
+    // 步骤4: 异步向量化简历
+    let vectorizeSuccess = false;
+    try {
+      if (parseSuccess && (resume.status === 'created' || resume.status === 'parsed' || resume.status === 'vectorize_failed')) {
+        await resumesService.vectorizeResume(resumeId);
+        console.log(`✅ 简历 ${resumeId} 向量化完成`);
+        vectorizeSuccess = true;
+      } else if (resume.status === 'vectorized' || resume.status === 'matched') {
+        console.log(`⏭️ 简历 ${resumeId} 已经向量化过，跳过向量化步骤`);
+        vectorizeSuccess = true;
+      } else if (!parseSuccess) {
+        console.log(`⚠️ 简历 ${resumeId} 解析失败，跳过向量化步骤`);
+      }
+    } catch (vectorizeError) {
+      console.error(`❌ 简历 ${resumeId} 向量化失败:`, vectorizeError);
+      // 继续执行后续步骤，不中断流程
+    }
+
+    // 步骤5: 异步执行岗位匹配
+    try {
+      if (vectorizeSuccess || resume.status === 'vectorized') {
+        const matches = await resumesService.getMatchedJobsForResume(resumeId);
+        console.log(`✅ 简历 ${resumeId} 匹配完成，找到 ${matches.length} 个岗位`);
+
+        // 更新状态为已匹配
+        await resumesModel.updateResumeStatus(resumeId, 'matched');
+        console.log(`✅ 简历 ${resumeId} 状态已更新为matched`);
+      } else {
+        console.log(`⚠️ 简历 ${resumeId} 向量化失败，跳过岗位匹配步骤`);
+        // 即使向量化失败，也尝试更新状态为处理完成，避免前端一直等待
+        await resumesModel.updateResumeStatus(resumeId, 'match_failed');
+      }
+    } catch (matchError) {
+      console.error(`❌ 简历 ${resumeId} 岗位匹配失败:`, matchError);
+      // 即使匹配失败也标记为处理完成
+      await resumesModel.updateResumeStatus(resumeId, 'match_failed');
+    }
+
+    console.log(`🎉 简历 ${resumeId} 完全异步处理完成`);
+    
+    // 再次检查状态，确保状态已更新
+    const finalResume = await resumesModel.getResumeById(resumeId);
+    console.log(`📊 简历 ${resumeId} 最终状态: ${finalResume?.status}`);
   } catch (error) {
-    console.error('简历上传失败:', error);
-    ctx.status = 500;
-    ctx.body = { 
-      error: '简历上传失败',
-      message: error instanceof Error ? error.message : '未知错误'
-    };
+    console.error(`❌ 简历 ${tempResumeId} 完全异步处理失败:`, error);
+
+    // 如果有真实resumeId，更新错误状态
+    try {
+      const realId = getRealResumeId(tempResumeId);
+      if (realId) {
+        await resumesModel.updateResumeStatus(realId, 'process_failed');
+        console.log(`⚠️ 简历 ${realId} 状态已更新为process_failed`);
+      }
+    } catch (updateError) {
+      console.error(`❌ 更新简历状态失败:`, updateError);
+    }
   }
 }
 
 /**
- * 控制器：处理简历上传并等待处理完成 - 同步版
- * 警告: 此方法会阻塞API调用，可能造成较长响应时间
+ * 控制器：获取简历处理进度
  * @param ctx Koa上下文
- * @param next Koa next函数
  */
-export async function uploadResume(ctx: Context, next: Next) {
-  const { file } = ctx;
-  if (!file) {
+export async function getResumeProgress(ctx: Context) {
+  const { resumeId } = ctx.params;
+  
+  if (!resumeId) {
     ctx.status = 400;
-    ctx.body = { error: '未找到上传的简历文件' };
-    return;
-  }
-
-  // 从认证中间件中获取用户ID
-  const userId = ctx.state.user?.userId;
-  if (!userId) {
-    ctx.status = 401;
-    ctx.body = { error: '用户未授权' };
+    ctx.body = { error: '必须提供简历ID' };
     return;
   }
 
   try {
-    // 步骤 1: 从上传文件中提取文本
-    const content = await extractTextFromFile(file);
-    console.log("🚀 ~ uploadResume ~ content:", content);
-    if (!content.trim()) {
-      ctx.status = 400;
-      ctx.body = { error: '无法从文件中提取有效文本内容' };
-      return;
-    }
-
-    // 步骤 2: 调用服务层处理业务逻辑 (包含解析、向量化和匹配)
-    const result = await resumesService.createResumeAndMatchJobs(
-      userId, 
-      content, 
-      file.originalname,
-      file.mimetype,
-      file.size
-    );
-
-    // 步骤 3: 确定处理状态并返回适当的响应
-    ctx.status = 200; // 已创建
-    
-    // 构建响应体
-    const response = {
-      message: '简历上传成功',
-      resumeId: result.resumeId,
-      status: '',
-      results: [],
-    };
-    
-    // 根据处理结果添加状态信息
-    if (result.matches && result.matches.length > 0) {
-      response.results = result.matches;
-      response.status = 'matched';
-      response.statusDescription = '简历已完成解析、向量化和岗位匹配';
-    } else if (result.vectorizeResult) {
-      response.status = 'vectorized';
-      response.statusDescription = '简历已完成解析和向量化，但未找到匹配岗位';
-    } else if (result.parseResult) {
-      response.status = 'parsed';
-      response.statusDescription = '简历已完成解析，但向量化过程未完成';
-    } else {
-      response.status = 'created';
-      response.statusDescription = '简历已保存，但解析过程未完成';
-    }
-    
-    console.log("🚀 ~ uploadResume ~ response:", response)
-    ctx.body = response;
-    await next();
+    const progress = await resumesService.getResumeProgress(resumeId);
+    ctx.status = 200;
+    ctx.body = progress;
   } catch (error) {
-    console.error('简历上传处理失败:', error);
-    
-    // 根据错误类型返回不同的状态码
-    if (error instanceof BusinessError) {
-      switch (error.code) {
-        case 'RESUME_NOT_FOUND':
+    console.error(`获取简历 ${resumeId} 进度失败:`, error);
+    if (error instanceof BusinessError && error.code === 'RESUME_NOT_FOUND') {
           ctx.status = 404;
-          break;
-        case 'RESUME_NOT_PARSED':
-        case 'PARSE_FAILED':
-        case 'VECTORIZE_FAILED':
-          ctx.status = 422; // Unprocessable Entity
-          break;
-        case 'VECTORDB_NOT_INITIALIZED':
-          ctx.status = 503; // Service Unavailable
-          break;
-        default:
-          ctx.status = 400;
-      }
-      
-      ctx.body = {
-        error: error.message,
-        code: error.code
-      };
+      ctx.body = { error: '简历不存在' };
     } else {
       ctx.status = 500;
-      ctx.body = {
-        error: '简历处理失败',
-        message: error instanceof Error ? error.message : '未知错误'
-      };
+      ctx.body = { error: '获取进度失败' };
     }
   }
 }
@@ -318,7 +352,6 @@ export async function matchResumeToJob(ctx: Context, next: Next) {
     const result = await resumesService.getEnhancedMatchForPair(resumeId, jobId);
     ctx.status = 200;
     ctx.body = result;
-    await next();
   } catch (error: unknown) {
     console.error(`为简历 ${resumeId} 和岗位 ${jobId} 匹配失败:`, error);
     if (error instanceof Error && error.message.includes('不存在')) {
@@ -345,7 +378,6 @@ export async function getMatchingJobsForResume(ctx: Context, next: Next) {
     const matches = await resumesService.getMatchedJobsForResume(resumeId, filters);
     ctx.status = 200;
     ctx.body = matches;
-    await next();
   } catch (error: unknown) {
     console.error(`为简历 ${resumeId} 获取匹配岗位失败:`, error);
     if (error instanceof Error && error.message.includes('不存在')) {

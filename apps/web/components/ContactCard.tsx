@@ -1,6 +1,6 @@
+import { Mail, Phone, MapPin, Globe, Github, Linkedin } from 'lucide-react';
 import React from 'react';
 import { Card } from 'ui';
-import { Mail, Phone, MapPin, Globe, Github, Linkedin } from 'lucide-react';
 
 // 联系信息类型定义
 interface ContactInfo {

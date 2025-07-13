@@ -14,6 +14,9 @@ const upload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'image/png',
       'image/jpeg',
+      'text/plain',
+      'text/markdown',
+      'text/x-markdown',
     ];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -43,8 +46,12 @@ const upload = multer({
  *                 format: binary
  *                 description: 简历文件
  *     responses:
- *       201:
- *         description: 上传成功，返回简历ID和匹配的岗位列表
+ *       202:
+ *         description: 上传成功，返回简历ID，后台异步处理
+ *       400:
+ *         description: 文件格式错误或内容无效
+ *       401:
+ *         description: 用户未授权
  */
 router.post('/upload', jwtAuth, upload.single('resume'), resumesController.uploadResume);
 
@@ -103,5 +110,41 @@ router.post('/match', jwtAuth, resumesController.matchResumeToJob);
  *         description: 返回匹配的岗位列表数据
  */
 router.get('/:resumeId/matching-jobs', jwtAuth, resumesController.getMatchingJobsForResume);
+
+/**
+ * @swagger
+ * /resumes/{resumeId}/progress:
+ *   get:
+ *     summary: 获取简历处理进度
+ *     tags:
+ *       - 简历
+ *     parameters:
+ *       - in: path
+ *         name: resumeId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 返回处理进度和结果
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 progress:
+ *                   type: number
+ *                   description: 处理进度百分比(0-100)
+ *                 status:
+ *                   type: string
+ *                   enum: [processing, done, failed]
+ *                   description: 处理状态
+ *                 jobs:
+ *                   type: array
+ *                   description: 匹配的岗位列表(仅在status为done时返回)
+ *       404:
+ *         description: 简历不存在
+ */
+router.get('/:resumeId/progress', jwtAuth, resumesController.getResumeProgress);
 
 export default router; 

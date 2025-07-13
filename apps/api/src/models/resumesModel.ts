@@ -25,7 +25,7 @@ export async function createResume(
       filename: fileName,
       filetype: fileType,
       filesize: fileSize,
-      status: 'pending', // 初始状态为待处理
+      status: 'created', // 初始状态为已创建
       title: fileName ? fileName.replace(/\.[^/.]+$/, '') : undefined, // 从文件名提取标题
     },
   });
