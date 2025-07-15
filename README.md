@@ -37,5 +37,3 @@ pnpm build
 - `apps/web` - Web应用前端
 - `packages/ui` - 共享UI组件
 - `packages/web3-utils` - Web3工具函数
-- `packages/resume-parser` - 简历解析模块
-- `packages/ai-engine` - AI评估引擎 

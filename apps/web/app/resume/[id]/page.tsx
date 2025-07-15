@@ -1,33 +1,46 @@
-'use client'
+'use client';
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+interface ResumeAnalysis {
+  job: {
+    title: string;
+    jobType: string;
+  };
+  createdAt: string;
+  recommended: boolean;
+  totalScore: number;
+  skillScore: number;
+  experienceScore: number;
+  matchingPoints: string[];
+  suggestions: string[];
+}
 
 export default function ResumeAnalysisPage() {
-  const { id } = useParams()
-  const router = useRouter()
-  const [analysis, setAnalysis] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { id } = useParams();
+  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const response = await fetch(`/api/resume/${id}`)
-        const { data } = await response.json()
-        setAnalysis(data)
+        const response = await fetch(`/api/resume/${id}`);
+        const { data } = await response.json();
+        setAnalysis(data);
       } catch (error) {
-        setError('获取分析结果失败')
+        setError('获取分析结果失败');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchAnalysis()
-  }, [id])
+    fetchAnalysis();
+  }, [id]);
 
   if (loading) {
-    return <div className="p-8">加载中...</div>
+    return <div className="p-8">加载中...</div>;
   }
 
   if (error) {
@@ -37,11 +50,11 @@ export default function ResumeAnalysisPage() {
           {error}
         </div>
       </div>
-    )
+    );
   }
 
   if (!analysis) {
-    return <div className="p-8">未找到分析结果</div>
+    return <div className="p-8">未找到分析结果</div>;
   }
 
   return (
@@ -62,16 +75,12 @@ export default function ResumeAnalysisPage() {
           </div>
           <div>
             <p className="text-gray-600">分析时间</p>
-            <p className="font-medium">
-              {new Date(analysis.createdAt).toLocaleString()}
-            </p>
+            <p className="font-medium">{new Date(analysis.createdAt).toLocaleString()}</p>
           </div>
           <div>
             <p className="text-gray-600">推荐结果</p>
             <p
-              className={`font-medium ${
-                analysis.recommended ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`font-medium ${analysis.recommended ? 'text-green-600' : 'text-red-600'}`}
             >
               {analysis.recommended ? '推荐面试' : '不推荐面试'}
             </p>
@@ -146,5 +155,5 @@ export default function ResumeAnalysisPage() {
         </ul>
       </div>
     </div>
-  )
-} 
+  );
+}

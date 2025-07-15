@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
-import * as nftService from '@/services/nftService';
+
 import type { NFTProof } from '@/prisma/web3cv';
+import * as nftService from '@/services/nftService';
 
 /**
  * 查询用户 NFT 证明 Controller
@@ -18,7 +19,7 @@ export async function getUserNfts(ctx: Context): Promise<void> {
     ctx.body = { nfts };
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -27,19 +28,31 @@ export async function getUserNfts(ctx: Context): Promise<void> {
  * @param ctx Koa 上下文
  */
 export async function recordNftAchievement(ctx: Context): Promise<void> {
-  const { userId, nftType, tokenId, txHash, mintedAt } = ctx.request.body as { userId: string; nftType: string; tokenId: string; txHash: string; mintedAt?: Date };
+  const { userId, nftType, tokenId, txHash, mintedAt } = ctx.request.body as {
+    userId: string;
+    nftType: string;
+    tokenId: string;
+    txHash: string;
+    mintedAt?: Date;
+  };
   if (!userId || !nftType || !tokenId || !txHash) {
     ctx.status = 400;
     ctx.body = { error: 'userId、nftType、tokenId、txHash 必填' };
     return;
   }
   try {
-    const id: string = await nftService.recordNftAchievement(userId, nftType, tokenId, txHash, mintedAt);
+    const id: string = await nftService.recordNftAchievement(
+      userId,
+      nftType,
+      tokenId,
+      txHash,
+      mintedAt
+    );
     ctx.status = 201;
     ctx.body = { id };
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -54,6 +67,6 @@ export async function blockchainInteraction(ctx: Context): Promise<void> {
     ctx.body = result;
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
-} 
+}

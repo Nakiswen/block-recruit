@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "allowSyntheticDefaultImports": true,
     "outDir": "dist",
     "rootDir": "src",
@@ -15,11 +15,13 @@
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "ts-node": {
-    "esm": true
+    "esm": true,
+    "transpileOnly": true,
+    "require": ["tsconfig-paths/register"]
   },
   "include": ["src/**/*.ts", "src/jest.config.js"],
   "exclude": [

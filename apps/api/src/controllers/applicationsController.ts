@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
-import * as applicationsService from '@/services/applicationsService';
+
 import type { Application } from '@/prisma/web3cv';
+import * as applicationsService from '@/services/applicationsService';
 
 /**
  * 创建投递记录 Controller
@@ -19,7 +20,7 @@ export async function createApplication(ctx: Context): Promise<void> {
     ctx.body = { id };
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -39,7 +40,7 @@ export async function getUserApplications(ctx: Context): Promise<void> {
     ctx.body = { applications };
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -59,6 +60,6 @@ export async function getJobApplications(ctx: Context): Promise<void> {
     ctx.body = { applications };
   } catch (error) {
     ctx.status = 500;
-    ctx.body = { error: (error instanceof Error ? error.message : String(error)) };
+    ctx.body = { error: error instanceof Error ? error.message : String(error) };
   }
-} 
+}

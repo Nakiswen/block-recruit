@@ -1,16 +1,32 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
+// 职位类型定义
 interface JobPosition {
   title: string;
   level: 'junior' | 'mid' | 'senior';
 }
 
+// 组件属性类型定义
 interface JobRequirementFormProps {
   defaultPositions: JobPosition[];
-  onChange: (requirements: any) => void;
-  initialValues?: any;
+  onChange: (requirements: JobRequirements) => void;
+  initialValues?: JobRequirements;
+}
+
+// 职位需求类型定义
+interface JobRequirements {
+  title: string;
+  level: 'junior' | 'mid' | 'senior';
+  skills: {
+    required: string[];
+    preferred: string[];
+  };
+  experience: {
+    minYears: number;
+    requiredFields: string[];
+  };
 }
 
 const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
@@ -25,13 +41,13 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
 }) => {
   const [selectedPosition, setSelectedPosition] = useState('');
   const [customPosition, setCustomPosition] = useState('');
-  const [experienceYears, setExperienceYears] = useState(initialValues.experience.minYears);
-  const [level, setLevel] = useState(initialValues.level);
-  const [requiredSkills, setRequiredSkills] = useState<string>(initialValues.skills.required.join(', '));
-  const [preferredSkills, setPreferredSkills] = useState<string>(initialValues.skills.preferred.join(', '));
-  const [requiredFields, setRequiredFields] = useState<string>(initialValues.experience.requiredFields.join(', '));
+  const [level, setLevel] = useState<'junior' | 'mid' | 'senior'>(initialValues.level || 'mid');
+  const [requiredSkills, setRequiredSkills] = useState('');
+  const [preferredSkills, setPreferredSkills] = useState('');
+  const [experienceYears, setExperienceYears] = useState(initialValues.experience.minYears || 2);
+  const [requiredFields, setRequiredFields] = useState('');
   const [isCustom, setIsCustom] = useState(false);
-  
+
   // 使用useRef来存储最新的状态，避免闭包陷阱
   const stateRef = useRef({
     requiredSkills,
@@ -40,7 +56,7 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
     requiredFields,
     customPosition,
     level,
-    isCustom
+    isCustom,
   });
 
   // 更新ref的值
@@ -52,46 +68,108 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
       requiredFields,
       customPosition,
       level,
-      isCustom
+      isCustom,
     };
-  }, [requiredSkills, preferredSkills, experienceYears, requiredFields, customPosition, level, isCustom]);
+  }, [
+    requiredSkills,
+    preferredSkills,
+    experienceYears,
+    requiredFields,
+    customPosition,
+    level,
+    isCustom,
+  ]);
 
   // 预定义的Web3相关技能
   const suggestedSkills = [
-    'Solidity', 'Rust', 'Smart Contracts', 'EVM', 'Layer 2', 
-    'Web3.js', 'ethers.js', 'React', 'DeFi', 'NFT', 'DAO',
-    'Gas Optimization', 'MetaMask', 'Hardhat', 'Truffle',
-    'Security Auditing', 'Consensus Mechanisms'
+    'Solidity',
+    'Rust',
+    'Smart Contracts',
+    'EVM',
+    'Layer 2',
+    'Web3.js',
+    'ethers.js',
+    'React',
+    'DeFi',
+    'NFT',
+    'DAO',
+    'Gas Optimization',
+    'MetaMask',
+    'Hardhat',
+    'Truffle',
+    'Security Auditing',
+    'Consensus Mechanisms',
   ];
 
   // Web3相关的经验领域
   const suggestedFields = [
-    'DeFi', 'NFT', 'DAO', 'Layer 1', 'Layer 2', 'DEX',
-    'Lending Protocols', 'Gaming', 'Cross-chain', 'Wallets',
-    'Infrastructure', 'Security'
+    'DeFi',
+    'NFT',
+    'DAO',
+    'Layer 1',
+    'Layer 2',
+    'DEX',
+    'Lending Protocols',
+    'Gaming',
+    'Cross-chain',
+    'Wallets',
+    'Infrastructure',
+    'Security',
   ];
 
-  // 使用useCallback优化函数
+  // 处理职位默认选中后的自定义更改
   const handleCustomChange = useCallback(() => {
-    // 从stateRef获取最新状态，但selectedPosition不在stateRef中
-    const { isCustom, customPosition, level, requiredSkills, preferredSkills, experienceYears, requiredFields } = stateRef.current;
-    
-    // 修复：直接使用组件中的selectedPosition状态变量
-    const title = isCustom ? customPosition : selectedPosition;
-    const requirements = {
+    const title = selectedPosition === 'custom' ? customPosition : selectedPosition;
+    if (!title) return;
+
+    onChange({
       title,
-      level,
+      level: level,
       skills: {
-        required: requiredSkills.split(',').map(s => s.trim()).filter(s => s),
-        preferred: preferredSkills.split(',').map(s => s.trim()).filter(s => s),
+        required: requiredSkills ? requiredSkills.split(',').map(s => s.trim()) : [],
+        preferred: preferredSkills ? preferredSkills.split(',').map(s => s.trim()) : [],
       },
       experience: {
         minYears: experienceYears,
-        requiredFields: requiredFields.split(',').map(s => s.trim()).filter(s => s),
+        requiredFields: requiredFields ? requiredFields.split(',').map(s => s.trim()) : [],
       },
-    };
-    onChange(requirements);
-  }, [onChange, selectedPosition]);
+    });
+  }, [
+    selectedPosition,
+    customPosition,
+    level,
+    requiredSkills,
+    preferredSkills,
+    experienceYears,
+    requiredFields,
+    onChange,
+  ]);
+
+  // 初始化表单数据
+  useEffect(() => {
+    if (initialValues && initialValues.title) {
+      const defaultPosition = defaultPositions.find(pos => pos.title === initialValues.title);
+
+      if (defaultPosition) {
+        setSelectedPosition(initialValues.title);
+      } else {
+        setSelectedPosition('custom');
+        setCustomPosition(initialValues.title);
+      }
+
+      const skillsRequired = initialValues.skills.required.join(', ');
+      const skillsPreferred = initialValues.skills.preferred.join(', ');
+      const fieldsRequired = initialValues.experience.requiredFields.join(', ');
+      const yearsRequired = initialValues.experience.minYears;
+      const positionLevel = initialValues.level as 'junior' | 'mid' | 'senior';
+
+      setRequiredSkills(skillsRequired);
+      setPreferredSkills(skillsPreferred);
+      setExperienceYears(yearsRequired);
+      setRequiredFields(fieldsRequired);
+      setLevel(positionLevel);
+    }
+  }, [initialValues, defaultPositions]);
 
   // 当选择预定义职位时更新表单
   useEffect(() => {
@@ -165,13 +243,22 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
   // 当自定义字段变化时更新要求，使用防抖处理
   useEffect(() => {
     if (!isCustom) return;
-    
+
     const timer = setTimeout(() => {
       handleCustomChange();
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [customPosition, level, requiredSkills, preferredSkills, experienceYears, requiredFields, isCustom, handleCustomChange]);
+  }, [
+    customPosition,
+    level,
+    requiredSkills,
+    preferredSkills,
+    experienceYears,
+    requiredFields,
+    isCustom,
+    handleCustomChange,
+  ]);
 
   // 添加推荐技能，使用useCallback优化函数
   const addSuggestedSkill = useCallback((skill: string, type: 'required' | 'preferred') => {
@@ -223,7 +310,7 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
 
   // 处理职位级别变更
   const handleLevelChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setLevel(e.target.value as any);
+    setLevel(e.target.value as 'junior' | 'mid' | 'senior');
     setIsCustom(true);
   }, []);
 
@@ -254,7 +341,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="position-select">选择职位</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="position-select">
+          选择职位
+        </label>
         <select
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
           value={selectedPosition}
@@ -262,9 +351,10 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           onChange={handlePositionChange}
         >
           <option value="">-- 选择职位 --</option>
-          {defaultPositions.map((position) => (
+          {defaultPositions.map(position => (
             <option key={position.title} value={position.title}>
-              {position.title} ({position.level === 'junior' ? '初级' : position.level === 'mid' ? '中级' : '高级'})
+              {position.title} (
+              {position.level === 'junior' ? '初级' : position.level === 'mid' ? '中级' : '高级'})
             </option>
           ))}
           <option value="custom">自定义职位</option>
@@ -273,7 +363,12 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
 
       {selectedPosition === 'custom' && (
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="custom-position-input">自定义职位名称</label>
+          <label
+            className="block text-sm font-medium text-gray-700 mb-1"
+            htmlFor="custom-position-input"
+          >
+            自定义职位名称
+          </label>
           <input
             id="custom-position-input"
             type="text"
@@ -288,7 +383,9 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
       {(selectedPosition || customPosition) && (
         <>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="level-select">职位级别</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="level-select">
+              职位级别
+            </label>
             <select
               id="level-select"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -302,7 +399,12 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="required-skills-textarea">必备技能</label>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="required-skills-textarea"
+            >
+              必备技能
+            </label>
             <textarea
               id="required-skills-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -312,11 +414,19 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
               placeholder="输入必备技能，用逗号分隔"
             />
             <div className="mt-2 flex flex-wrap gap-2">
-              {suggestedSkills.slice(0, 8).map((skill) => (
+              {suggestedSkills.slice(0, 8).map(skill => (
                 <span
                   key={skill}
                   className="inline-block px-2 py-1 bg-gray-100 text-xs rounded-full cursor-pointer hover:bg-gray-200"
                   onClick={() => addSuggestedSkill(skill, 'required')}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      addSuggestedSkill(skill, 'required');
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   + {skill}
                 </span>
@@ -325,7 +435,12 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="preferred-skills-textarea">加分技能</label>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="preferred-skills-textarea"
+            >
+              加分技能
+            </label>
             <textarea
               id="preferred-skills-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -335,11 +450,19 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
               placeholder="输入加分技能，用逗号分隔"
             />
             <div className="mt-2 flex flex-wrap gap-2">
-              {suggestedSkills.slice(8, 16).map((skill) => (
+              {suggestedSkills.slice(8, 16).map(skill => (
                 <span
                   key={skill}
                   className="inline-block px-2 py-1 bg-gray-100 text-xs rounded-full cursor-pointer hover:bg-gray-200"
                   onClick={() => addSuggestedSkill(skill, 'preferred')}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      addSuggestedSkill(skill, 'preferred');
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   + {skill}
                 </span>
@@ -348,7 +471,12 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="experience-years-input">最低经验年限</label>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="experience-years-input"
+            >
+              最低经验年限
+            </label>
             <input
               id="experience-years-input"
               type="number"
@@ -361,7 +489,12 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="required-fields-textarea">相关领域经验</label>
+            <label
+              className="block text-sm font-medium text-gray-700 mb-1"
+              htmlFor="required-fields-textarea"
+            >
+              相关领域经验
+            </label>
             <textarea
               id="required-fields-textarea"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
@@ -371,11 +504,19 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
               placeholder="输入相关领域，用逗号分隔"
             />
             <div className="mt-2 flex flex-wrap gap-2">
-              {suggestedFields.slice(0, 8).map((field) => (
+              {suggestedFields.slice(0, 8).map(field => (
                 <span
                   key={field}
                   className="inline-block px-2 py-1 bg-gray-100 text-xs rounded-full cursor-pointer hover:bg-gray-200"
                   onClick={() => addSuggestedField(field)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      addSuggestedField(field);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   + {field}
                 </span>
@@ -388,4 +529,4 @@ const JobRequirementForm: React.FC<JobRequirementFormProps> = ({
   );
 };
 
-export default JobRequirementForm; 
+export default JobRequirementForm;

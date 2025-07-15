@@ -4,7 +4,7 @@ const path = require('path');
 
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["ui", "resume-parser", "web3-utils", "web3-rag"],
+  transpilePackages: ['ui', 'web3-utils'],
   images: {
     domains: ['images.unsplash.com', 'app.uniswap.org'],
   },
@@ -50,24 +50,24 @@ const nextConfig = {
         path: false,
         // 确保这些服务器端模块不包含在客户端包中
         axios: false,
-        'openai': false
+        openai: false,
       };
     }
-    
+
     // 添加插件处理node:buffer等内置模块
     config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
-        resource.request = resource.request.replace(/^node:/, "");
+      new webpack.NormalModuleReplacementPlugin(/^node:/, resource => {
+        resource.request = resource.request.replace(/^node:/, '');
       })
     );
 
     config.resolve.alias.canvas = false;
-    
+
     // 设置 @ 别名指向项目根目录
     config.resolve.alias['@'] = path.resolve(__dirname, '../../');
 
     return config;
   },
-}
+};
 
-module.exports = nextConfig 
+module.exports = nextConfig;

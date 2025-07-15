@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { DocumentTextIcon, ArrowUpTrayIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 
 interface ResumeUploadProps {
   onFileSelect: (file: File) => void;
@@ -23,32 +23,38 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateAndSetFile = useCallback((fileToValidate: File) => {
-    setError(null);
-    
-    // 检查文件类型
-    const fileExtension = '.' + fileToValidate.name.split('.').pop()?.toLowerCase();
-    if (!acceptedFileTypes.includes(fileExtension)) {
-      setError(`文件类型不被支持。请上传 ${acceptedFileTypes.join(', ')} 格式的文件。`);
-      return;
-    }
-    
-    // 检查文件大小
-    const fileSizeMB = fileToValidate.size / (1024 * 1024);
-    if (fileSizeMB > maxSizeMB) {
-      setError(`文件过大。最大支持 ${maxSizeMB}MB。`);
-      return;
-    }
-    
-    setFile(fileToValidate);
-    onFileSelect(fileToValidate);
-  }, [acceptedFileTypes, maxSizeMB, onFileSelect]);
+  const validateAndSetFile = useCallback(
+    (fileToValidate: File) => {
+      setError(null);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      validateAndSetFile(e.target.files[0]);
-    }
-  }, [validateAndSetFile]);
+      // 检查文件类型
+      const fileExtension = '.' + fileToValidate.name.split('.').pop()?.toLowerCase();
+      if (!acceptedFileTypes.includes(fileExtension)) {
+        setError(`文件类型不被支持。请上传 ${acceptedFileTypes.join(', ')} 格式的文件。`);
+        return;
+      }
+
+      // 检查文件大小
+      const fileSizeMB = fileToValidate.size / (1024 * 1024);
+      if (fileSizeMB > maxSizeMB) {
+        setError(`文件过大。最大支持 ${maxSizeMB}MB。`);
+        return;
+      }
+
+      setFile(fileToValidate);
+      onFileSelect(fileToValidate);
+    },
+    [acceptedFileTypes, maxSizeMB, onFileSelect]
+  );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        validateAndSetFile(e.target.files[0]);
+      }
+    },
+    [validateAndSetFile]
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -60,14 +66,17 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      validateAndSetFile(e.dataTransfer.files[0]);
-    }
-  }, [validateAndSetFile]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragging(false);
+
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        validateAndSetFile(e.dataTransfer.files[0]);
+      }
+    },
+    [validateAndSetFile]
+  );
 
   const handleClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -85,7 +94,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
   useEffect(() => {
     // 在 effect 内部捕获当前的 ref 值
     const currentFileInput = fileInputRef.current;
-    
+
     return () => {
       // 释放文件引用以避免内存泄露
       setFile(null);
@@ -95,20 +104,41 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
     };
   }, []);
 
+  // 由于该 div 绑定了 onClick 事件，但不是交互元素，需为其添加键盘可访问性支持，提升无障碍性
+  // 详细注释见下方
   return (
     <div className={className}>
-      <div 
+      <div
         className={`relative rounded-2xl p-8 transition-all duration-300 ${
-          isDragging 
-            ? 'border-2 border-dashed border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-md' 
-            : file 
-              ? 'border-2 border-dashed border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-md' 
+          isDragging
+            ? 'border-2 border-dashed border-indigo-500 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-md'
+            : file
+              ? 'border-2 border-dashed border-indigo-400 bg-gradient-to-r from-indigo-50 to-purple-50 shadow-md'
               : 'border-2 border-dashed border-gray-300 bg-gray-50 hover:border-indigo-400 hover:bg-white hover:shadow-md'
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        // 仅在未选择文件时允许点击上传
         onClick={file ? undefined : handleClick}
+        // 增加 role="button" 让屏幕阅读器识别为按钮
+        role={file ? undefined : 'button'}
+        // tabIndex=0 使其可聚焦，便于键盘操作
+        tabIndex={file ? -1 : 0}
+        // 支持键盘回车/空格触发上传
+        onKeyDown={
+          file
+            ? undefined
+            : (e: React.KeyboardEvent<HTMLDivElement>) => {
+                // 仅在未选择文件时响应
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClick();
+                }
+              }
+        }
+        aria-disabled={!!file}
+        aria-label={file ? undefined : '上传简历'}
       >
         <input
           type="file"
@@ -117,7 +147,7 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
           accept={acceptedFileTypes.join(',')}
           className="hidden"
         />
-        
+
         {!file ? (
           <div className="space-y-4 text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center shadow-md transform transition-transform hover:scale-105">
@@ -140,12 +170,10 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
             </div>
             <div className="flex-1 min-w-0 ml-4">
               <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-              <p className="text-xs text-gray-500">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB
-              </p>
+              <p className="text-xs text-gray-500">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
             </div>
-            <button 
-              type="button" 
+            <button
+              type="button"
               onClick={removeFile}
               className="text-gray-400 hover:text-red-500 transition-colors p-1"
             >
@@ -158,7 +186,18 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
       {error && (
         <div className="mt-2 px-4 py-2 bg-red-50 text-sm text-red-600 rounded-lg border border-red-200 shadow-sm">
           <p className="flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path></svg>
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              ></path>
+            </svg>
             {error}
           </p>
         </div>
@@ -168,4 +207,4 @@ const ResumeUpload: React.FC<ResumeUploadProps> = ({
 };
 
 // 使用React.memo减少不必要的重渲染
-export default React.memo(ResumeUpload); 
+export default React.memo(ResumeUpload);

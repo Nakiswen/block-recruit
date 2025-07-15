@@ -1,15 +1,17 @@
+import fs from 'fs';
+import path from 'path';
+import { promisify } from 'util';
+
 import type { Context, Next } from 'koa';
 import type { File } from '@koa/multer';
 import mammoth from 'mammoth';
 import { createWorker } from 'tesseract.js';
-import * as resumesService from '@/services/resumesService';
-import * as resumesModel from '@/models/resumesModel';
-import { BusinessError } from '@/services/resumesService';
-import fs from 'fs';
-import path from 'path';
-import { promisify } from 'util';
 import { exec } from 'child_process';
 import { setResumeIdMapping, getRealResumeId } from '@/utils/resumeIdMap';
+
+import * as resumesService from '@/services/resumesService';
+import { BusinessError } from '@/services/resumesService';
+import * as resumesModel from '@/models/resumesModel';
 
 const execPromise = promisify(exec);
 
@@ -20,46 +22,46 @@ const execPromise = promisify(exec);
  * @throws 如果文件类型不受支持或解析失败，则抛出错误。
  */
 async function extractTextFromFile(file: File): Promise<string> {
-  console.log("🚀 ~ extractTextFromFile ~ file:", file)
+  console.log('🚀 ~ extractTextFromFile ~ file:', file);
   switch (file.mimetype) {
     case 'application/pdf': {
       try {
         // 尝试使用动态导入方式
         try {
           const pdfjs = await import('pdfjs-dist');
-          
+
           // 创建文档加载任务
           const loadingTask = pdfjs.getDocument({ data: file.buffer });
           const pdfDoc = await loadingTask.promise;
           let text = '';
-          
+
           for (let i = 1; i <= pdfDoc.numPages; i++) {
             const page = await pdfDoc.getPage(i);
             const content = await page.getTextContent();
             const pageText = content.items
-              .map((item: any) => 'str' in item ? item.str : '')
+              .map((item: any) => ('str' in item ? item.str : ''))
               .join(' ');
             text += pageText + '\n';
           }
-          
+
           return text;
         } catch (pdfError) {
           console.error('PDF库解析失败，尝试使用备用方法:', pdfError);
-          
+
           // 备用方法：将PDF内容保存为临时文件，然后直接读取内容
           // 注意：这种方法只能提取简单的文本内容
           const tempDir = path.join(process.cwd(), 'temp');
           if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
           }
-          
+
           const tempPdfPath = path.join(tempDir, `temp_${Date.now()}.pdf`);
           const tempTxtPath = path.join(tempDir, `temp_${Date.now()}.txt`);
-          
+
           try {
             // 写入临时PDF文件
             fs.writeFileSync(tempPdfPath, file.buffer);
-            
+
             // 尝试使用系统工具提取文本（如果有安装的话）
             try {
               await execPromise(`pdftotext "${tempPdfPath}" "${tempTxtPath}"`);
@@ -92,7 +94,9 @@ async function extractTextFromFile(file: File): Promise<string> {
     case 'image/png':
     case 'image/jpeg': {
       const worker = await createWorker();
-      const { data: { text } } = await worker.recognize(file.buffer);
+      const {
+        data: { text },
+      } = await worker.recognize(file.buffer);
       await worker.terminate();
       return text;
     }
@@ -140,7 +144,7 @@ export async function uploadResume(ctx: Context) {
   ctx.body = {
     message: '简历上传成功，正在后台处理',
     resumeId: tempResumeId,
-    status: 'processing'
+    status: 'processing',
   };
 
   // 启动完全异步的处理流程
@@ -173,8 +177,8 @@ async function processResumeCompletelyAsync(
 
     // 步骤2: 异步保存到数据库
     const resumeId = await resumesService.uploadResume(
-      userId, 
-      content, 
+      userId,
+      content,
       file.originalname,
       file.mimetype,
       file.size
@@ -195,7 +199,7 @@ async function processResumeCompletelyAsync(
       console.log(`⏭️ 简历 ${resumeId} 已经处理完成(状态为matched)，无需重复处理`);
       return;
     }
-    
+
     // 如果状态不是created，但也不是matched，可能是处理中断，尝试继续处理
     if (resume.status !== 'created') {
       console.log(`⚠️ 简历 ${resumeId} 状态为 ${resume.status}，可能处理中断，尝试继续处理`);
@@ -220,7 +224,12 @@ async function processResumeCompletelyAsync(
     // 步骤4: 异步向量化简历
     let vectorizeSuccess = false;
     try {
-      if (parseSuccess && (resume.status === 'created' || resume.status === 'parsed' || resume.status === 'vectorize_failed')) {
+      if (
+        parseSuccess &&
+        (resume.status === 'created' ||
+          resume.status === 'parsed' ||
+          resume.status === 'vectorize_failed')
+      ) {
         await resumesService.vectorizeResume(resumeId);
         console.log(`✅ 简历 ${resumeId} 向量化完成`);
         vectorizeSuccess = true;
@@ -256,7 +265,7 @@ async function processResumeCompletelyAsync(
     }
 
     console.log(`🎉 简历 ${resumeId} 完全异步处理完成`);
-    
+
     // 再次检查状态，确保状态已更新
     const finalResume = await resumesModel.getResumeById(resumeId);
     console.log(`📊 简历 ${resumeId} 最终状态: ${finalResume?.status}`);
@@ -282,7 +291,7 @@ async function processResumeCompletelyAsync(
  */
 export async function getResumeProgress(ctx: Context) {
   const { resumeId } = ctx.params;
-  
+
   if (!resumeId) {
     ctx.status = 400;
     ctx.body = { error: '必须提供简历ID' };
@@ -296,7 +305,7 @@ export async function getResumeProgress(ctx: Context) {
   } catch (error) {
     console.error(`获取简历 ${resumeId} 进度失败:`, error);
     if (error instanceof BusinessError && error.code === 'RESUME_NOT_FOUND') {
-          ctx.status = 404;
+      ctx.status = 404;
       ctx.body = { error: '简历不存在' };
     } else {
       ctx.status = 500;
@@ -311,7 +320,7 @@ export async function getResumeProgress(ctx: Context) {
  */
 export async function processResume(ctx: Context) {
   const { resumeId } = ctx.params;
-  
+
   if (!resumeId) {
     ctx.throw(400, '必须提供简历ID');
   }
@@ -319,16 +328,16 @@ export async function processResume(ctx: Context) {
   try {
     // 步骤 1: 解析结构化数据
     await resumesService.parseResume(resumeId);
-    
+
     // 步骤 2: 向量化存储
     await resumesService.vectorizeResume(resumeId);
-    
+
     // 返回成功响应
     ctx.status = 200;
     ctx.body = {
       message: '简历处理成功',
       resumeId: resumeId,
-      status: 'vectorized'
+      status: 'vectorized',
     };
   } catch (error) {
     console.error(`处理简历 ${resumeId} 失败:`, error);
@@ -373,7 +382,7 @@ export async function getMatchingJobsForResume(ctx: Context, next: Next) {
   if (!resumeId) {
     ctx.throw(400, '必须提供简历ID');
   }
-  
+
   try {
     const matches = await resumesService.getMatchedJobsForResume(resumeId, filters);
     ctx.status = 200;

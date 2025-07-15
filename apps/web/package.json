@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "clean": "rm -rf .next",
+    "dev": "next dev",
+    "generate-api": "node ./scripts/generate-api.js",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
-    "clean": "rm -rf .next",
-    "generate-api": "node ./scripts/generate-api.js"
+    "start": "next start"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
@@ -20,6 +20,7 @@
     "axios": "^1.6.2",
     "ethers": "^6.9.0",
     "jotai": "^2.6.0",
+    "lucide-react": "^0.511.0",
     "mastra": "^0.4.9",
     "next": "14.1.0",
     "openai": "^4.29.0",
@@ -27,9 +28,7 @@
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
     "react-transition-group": "^4.4.5",
-    "resume-parser": "workspace:*",
     "ui": "workspace:*",
-    "web3-rag": "workspace:*",
     "web3-utils": "workspace:*"
   },
   "devDependencies": {

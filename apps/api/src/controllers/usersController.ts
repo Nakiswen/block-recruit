@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
-import * as usersService from '@/services/usersService';
+
 import type { User } from '@/prisma/web3cv';
+import * as usersService from '@/services/usersService';
 
 /**
  * 查询当前用户信息及其投递记录 Controller

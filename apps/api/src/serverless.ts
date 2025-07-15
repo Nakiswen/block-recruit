@@ -1,17 +1,18 @@
 import Koa from 'koa';
-import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
+import Router from 'koa-router';
 import serverless from 'serverless-http';
+
 import authRouter from './routes/auth';
-import usersRouter from './routes/users';
 import jobsRouter from './routes/jobs';
 import resumesRouter from './routes/resumes';
+import usersRouter from './routes/users';
 // 其他路由按需引入
 
 const app = new Koa();
 const router = new Router();
 
-router.get('/health', async (ctx) => {
+router.get('/health', async ctx => {
   ctx.body = { status: 'ok', message: 'API服务运行正常' };
 });
 
@@ -25,4 +26,4 @@ app.use(resumesRouter.routes()).use(resumesRouter.allowedMethods());
 // 其他路由同理
 
 // 导出 serverless handler
-export const handler = serverless(app); 
+export const handler = serverless(app);

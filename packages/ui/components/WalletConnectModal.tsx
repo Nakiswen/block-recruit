@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import Image from 'next/image';
+import React, { Fragment } from 'react';
 
 // 定义支持的钱包类型
 export type WalletType = 'metamask' | 'walletconnect' | 'coinbase';
@@ -73,15 +72,12 @@ const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
               leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 mb-4"
-                >
+                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
                   连接钱包
                 </Dialog.Title>
 
                 <div className="mt-4 space-y-3">
-                  {WALLET_OPTIONS.map((wallet) => (
+                  {WALLET_OPTIONS.map(wallet => (
                     <button
                       key={wallet.id}
                       className="w-full flex items-center p-4 rounded-xl hover:bg-gray-50 border border-gray-200 transition-colors"
@@ -104,9 +100,7 @@ const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                             </span>
                           )}
                           {wallet.isDetected && (
-                            <span className="ml-2 text-sm text-gray-500">
-                              已检测
-                            </span>
+                            <span className="ml-2 text-sm text-gray-500">已检测</span>
                           )}
                         </div>
                       </div>
@@ -126,4 +120,4 @@ const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   );
 };
 
-export default WalletConnectModal; 
+export default WalletConnectModal;
