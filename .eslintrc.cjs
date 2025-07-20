@@ -34,13 +34,11 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'plugin:import/errors',
-    'plugin:import/warnings',
+    // 注意：移除重复的 import 扩展，只保留一个
+    'plugin:import/recommended',
     'plugin:import/typescript',
     'plugin:jsx-a11y/recommended',
-    'plugin:@next/next/recommended',
-    'next/core-web-vitals',
-    'prettier', // 确保这是最后一个扩展，以覆盖其他规则
+    'prettier',
   ],
   rules: {
     // React规则

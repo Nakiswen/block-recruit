@@ -3,39 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "turbo run dev",
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "lint:fix": "turbo run lint:fix",
+    "check": "turbo run lint format:check",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "check": "turbo run lint format:check",
-    "prepare": "husky install",
-    "clean": "turbo run clean",
     "generate-api": "cd apps/web && npm run generate-api",
-    "update-swagger": "cd apps/api && npm run generate-swagger",
-    "update-api": "cd apps/api && npm run update-api-client"
-  },
-  "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "dotenv-cli": "^8.0.0",
-    "eslint": "^8.56.0",
-    "eslint-config-next": "^14.1.0",
-    "eslint-config-prettier": "^10.1.5",
-    "eslint-import-resolver-typescript": "^4.4.4",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.1.2",
-    "prettier": "^3.6.2",
-    "sort-package-json": "^3.3.1",
-    "turbo": "^1.10.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "prepare": "husky install",
+    "update-api": "cd apps/api && npm run update-api-client",
+    "update-swagger": "cd apps/api && npm run generate-swagger"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
@@ -59,5 +38,25 @@
     "utf-8-validate": "^6.0.5",
     "web": "^0.0.2",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "dotenv-cli": "^8.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.1.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.2",
+    "prettier": "^3.6.2",
+    "sort-package-json": "^3.3.1",
+    "turbo": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
