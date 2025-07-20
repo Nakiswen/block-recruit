@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "composite": true,
     "target": "es5",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
@@ -21,15 +22,15 @@
       }
     ],
     "paths": {
-      "@/*": ["../../*"]
+      "@/*": ["./*"]
     },
     "baseUrl": "."
   },
   "include": [
-    "next-env.d.ts", 
-    "**/*.ts", 
-    "**/*.tsx", 
-    ".next/types/**/*.ts", 
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
     "lib/api-config.js"
   ],
   "exclude": ["node_modules"]

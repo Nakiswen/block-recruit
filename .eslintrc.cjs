@@ -60,14 +60,7 @@ module.exports = {
     // 导入规则
     'import/prefer-default-export': 'off', // 不要求只有一个导出时使用默认导出
     'import/no-extraneous-dependencies': ['error', { devDependencies: true }], // 允许导入devDependencies
-    'import/order': [
-      'error',
-      {
-        groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
-        'newlines-between': 'always',
-        alphabetize: { order: 'asc' },
-      },
-    ],
+    'import/order': "off",
     
     // 通用规则
     'no-console': ['warn', { allow: ['warn', 'error'] }], // 警告console.log，允许console.warn和console.error

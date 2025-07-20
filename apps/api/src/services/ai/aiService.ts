@@ -254,180 +254,129 @@ class LangChainAIService implements AIService {
    * 从简历中提取结构化信息 - 调试增强版
    */
   async extractResumeInfo(resume: Resume): Promise<ResumeStructuredInfo> {
-    return {
-      skills: [
-        'rust',                 'go',
-        'typescript',           'javascript',
-        'c/c++',                'react',
-        'next.js',              'vue.js',
-        'html5',                'css3',
-        'tailwind css',         'node.js',
-        'express.js',           'fastapi',
-        'restful apis',         'graphql',
-        'postgresql',           'mongodb',
-        'redis',                'dynamodb',
-        'docker',               'kubernetes',
-        'aws',                  'gcp',
-        'ci/cd pipelines',      'ethereum',
-        'solana',               'p2p networking',
-        'consensus algorithms', 'smart contracts',
-        'git',                  'websocket',
-        'grpc',                 'protocol buffers',
-        'docker compose',       'libp2p',
-        'ipfs',                 'web3.js',
-        'solidity'
-      ],
-      experienceYears: 4,
-      educationLevel: "Bachelor's Degree",
-      industryExperience: [
-        'Full-Stack Development',
-        'Backend Development',
-        'Blockchain Technology',
-        'Distributed Systems',
-        'Financial Technology',
-        'Data Systems',
-        'DeFi',
-        'Developer Tools'
-      ],
-      location: 'Not specified',
-      keyAchievements: [
-        'Architected distributed microservices handling 1M+ daily transactions',
-        'Led development of custom SDK used by 500+ external developers',
-        'Built real-time communication features serving 50K+ concurrent users',
-        'Achieved 95% code coverage in automated testing suites',
-        'Optimized database queries resulting in 40% performance improvement',
-        'Created open-source project with 1000+ GitHub stars',
-        'Delivered features with 99.9% uptime',
-        'AWS Certified Developer Associate',
-        'Certified Kubernetes Application Developer',
-        'Active contributor to multiple open-source projects'
-      ],
-      salaryFlexible: true,
-      currentSalary: { min: 120000, max: 160000, currency: 'USD', period: 'annually' }
-    };
 
-//     console.log('🔍 开始提取简历信息:', {
-//       resumeId: resume.id,
-//       hasName: !!resume.name,
-//       hasSummary: !!resume.summary,
-//       hasWorkExperience: !!resume.workExperience,
-//       hasEducation: !!resume.education,
-//       hasSkills: !!resume.skills,
-//       resumeData: resume
-//     });
+    console.log('🔍 开始提取简历信息:', {
+      resumeId: resume.id,
+      hasName: !!resume.name,
+      hasSummary: !!resume.summary,
+      hasWorkExperience: !!resume.workExperience,
+      hasEducation: !!resume.education,
+      hasSkills: !!resume.skills,
+      resumeData: resume
+    });
 
-//     try {
-//       // 验证 AI 服务配置
-//       if (!this.config.apiKey) {
-//         console.error('❌ AI API Key 未配置');
-//         throw new Error('AI API Key is not configured');
-//       }
+    try {
+      // 验证 AI 服务配置
+      if (!this.config.apiKey) {
+        console.error('❌ AI API Key 未配置');
+        throw new Error('AI API Key is not configured');
+      }
 
-//       const parser = StructuredOutputParser.fromZodSchema(
-//         z.object({
-//           skills: z.array(z.string()),
-//           experienceYears: z.number(),
-//           educationLevel: z.string(),
-//           industryExperience: z.array(z.string()),
-//           location: z.string(),
-//           keyAchievements: z.array(z.string()),
-//           expectedSalaryRange: z
-//             .object({
-//               min: z.number(),
-//               max: z.number(),
-//               currency: z.string(),
-//               period: z.enum(['monthly', 'annually']),
-//             })
-//             .optional(),
-//           salaryFlexible: z.boolean(),
-//           currentSalary: z
-//             .object({
-//               min: z.number(),
-//               max: z.number(),
-//               currency: z.string(),
-//               period: z.enum(['monthly', 'annually']),
-//             })
-//             .optional(),
-//         })
-//       );
+      const parser = StructuredOutputParser.fromZodSchema(
+        z.object({
+          skills: z.array(z.string()),
+          experienceYears: z.number(),
+          educationLevel: z.string(),
+          industryExperience: z.array(z.string()),
+          location: z.string(),
+          keyAchievements: z.array(z.string()),
+          expectedSalaryRange: z
+            .object({
+              min: z.number(),
+              max: z.number(),
+              currency: z.string(),
+              period: z.enum(['monthly', 'annually']),
+            })
+            .optional(),
+          salaryFlexible: z.boolean(),
+          currentSalary: z
+            .object({
+              min: z.number(),
+              max: z.number(),
+              currency: z.string(),
+              period: z.enum(['monthly', 'annually']),
+            })
+            .optional(),
+        })
+      );
 
-//       const promptTemplate = `
-// 请从以下简历信息中提取关键信息。
+      const promptTemplate = `
+请从以下简历信息中提取关键信息。
 
-// 原始简历内容:
-// ${resume.content}
+原始简历内容:
+${resume.content}
 
-// 姓名: {name}
-// 个人简介: {summary}
-// 工作经历: {workExperience}
-// 项目经历: {projects}
-// 教育背景: {education}
-// 已标记技能: {existingSkills}
-// 薪资期望: {salaryExpectation}
+姓名: {name}
+个人简介: {summary}
+工作经历: {workExperience}
+项目经历: {projects}
+教育背景: {education}
+已标记技能: {existingSkills}
+薪资期望: {salaryExpectation}
 
-// 请提取以下信息:
-// 1. 技能列表 (skills) - 从文本中全面提取
-// 2. 工作年限 (experienceYears) - 从工作经历计算
-// 3. 最高学历 (educationLevel)
-// 4. 行业经验 (industryExperience)
-// 5. 所在地区 (location)
-// 6. 主要成就 (keyAchievements)
-// 7. 期望薪资范围 (expectedSalaryRange)
-// 8. 薪资要求灵活性 (salaryFlexible)
-// 9. 当前薪资 (currentSalary) - 从工作经历推断
+请提取以下信息:
+1. 技能列表 (skills) - 从文本中全面提取
+2. 工作年限 (experienceYears) - 从工作经历计算
+3. 最高学历 (educationLevel)
+4. 行业经验 (industryExperience)
+5. 所在地区 (location)
+6. 主要成就 (keyAchievements)
+7. 期望薪资范围 (expectedSalaryRange)
+8. 薪资要求灵活性 (salaryFlexible)
+9. 当前薪资 (currentSalary) - 从工作经历推断
 
-// 薪资提取重点:
-// - 从个人简介、工作经历中识别薪资相关信息
-// - 识别"期望月薪15-20k"、"年薪期望30万+"等表述
-// - 如果提到"薪资可议"、"面谈"等，设置salaryFlexible为true
-// - 从当前/最近工作经历推断当前薪资水平
-// - 考虑地区差异和行业标准
+薪资提取重点:
+- 从个人简介、工作经历中识别薪资相关信息
+- 识别"期望月薪15-20k"、"年薪期望30万+"等表述
+- 如果提到"薪资可议"、"面谈"等，设置salaryFlexible为true
+- 从当前/最近工作经历推断当前薪资水平
+- 考虑地区差异和行业标准
 
-// {format_instructions}
-// `;
+{format_instructions}
+`;
 
-//       const prompt = PromptTemplate.fromTemplate(promptTemplate);
-//       const formattedPrompt = await prompt.format({
-//         name: resume.name || '未知',
-//         summary: resume.summary || '无个人简介',
-//         workExperience: resume.workExperience || '无工作经历',
-//         projects: resume.projects || '无项目经历',
-//         education: resume.education || '无教育背景',
-//         existingSkills: resume.skills ? resume.skills.join(', ') : '无已标记技能',
-//         salaryExpectation: (resume as any).salaryExpectation || '未明确薪资期望',
-//         format_instructions: parser.getFormatInstructions(),
-//       });
+      const prompt = PromptTemplate.fromTemplate(promptTemplate);
+      const formattedPrompt = await prompt.format({
+        name: resume.name || '未知',
+        summary: resume.summary || '无个人简介',
+        workExperience: resume.workExperience || '无工作经历',
+        projects: resume.projects || '无项目经历',
+        education: resume.education || '无教育背景',
+        existingSkills: resume.skills ? resume.skills.join(', ') : '无已标记技能',
+        salaryExpectation: (resume as any).salaryExpectation || '未明确薪资期望',
+        format_instructions: parser.getFormatInstructions(),
+      });
 
-//       const response = await this.model.invoke(formattedPrompt);
+      const response = await this.model.invoke(formattedPrompt);
       
-//       const content =
-//         typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
+      const content =
+        typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
       
-//       const result = await parser.parse(content);
+      const result = await parser.parse(content);
 
-//       const normalizedResult = this.normalizeResumeInfo(result);
+      const normalizedResult = this.normalizeResumeInfo(result);
       
-//       console.log('🔄 规范化后的结果:', normalizedResult);
+      console.log('🔄 规范化后的结果:', normalizedResult);
 
-//       return normalizedResult;
-//     } catch (error) {
-//       console.error('❌ 提取简历信息失败:', {
-//         error: error,
-//         message: error instanceof Error ? error.message : 'Unknown error',
-//         stack: error instanceof Error ? error.stack : undefined
-//       });
+      return normalizedResult;
+    } catch (error) {
+      console.error('❌ 提取简历信息失败:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
       
-//       // 返回默认值而不是抛出错误，这样可以查看是否是这里导致的空数据
-//       return {
-//         skills: [],
-//         experienceYears: 0,
-//         educationLevel: '未知',
-//         industryExperience: [],
-//         location: '未知',
-//         keyAchievements: [],
-//         salaryFlexible: false,
-//       };
-//     }
+      // 返回默认值而不是抛出错误，这样可以查看是否是这里导致的空数据
+      return {
+        skills: [],
+        experienceYears: 0,
+        educationLevel: '未知',
+        industryExperience: [],
+        location: '未知',
+        keyAchievements: [],
+        salaryFlexible: false,
+      };
+    }
   }
 
   /**

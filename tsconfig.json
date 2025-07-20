@@ -1,4 +1,8 @@
 {
+  "references": [
+    { "path": "./apps/api" },
+    { "path": "./apps/web" }
+  ],
   "compilerOptions": {
     "target": "es2019",
     "lib": ["dom", "dom.iterable", "esnext"],
