@@ -1,4 +1,4 @@
-import { PrismaClient } from './web3cv';
+import { PrismaClient } from './web3cv/index.js';
 
 const prisma = new PrismaClient();
 

@@ -78,7 +78,7 @@ async function testResumeRagService() {
           // 获取岗位详情
           try {
             const job = await jobsPrisma.job_posting.findUnique({
-              where: { topic_id: BigInt(match.id) }
+              where: { topic_id: match.id }
             });
             
             if (job) {

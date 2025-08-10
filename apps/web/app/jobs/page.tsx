@@ -190,7 +190,7 @@ export default function JobsPage() {
                     {/* 职位描述 */}
                     {job.description && (
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
+                    <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
                         <div className="prose text-gray-700">
                           <ReactMarkdown>{job.description}</ReactMarkdown>
                         </div>

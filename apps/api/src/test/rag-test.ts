@@ -13,14 +13,20 @@ async function testRagService() {
     await ragService.init();
     console.log('RAG服务初始化成功');
     
-    // 获取岗位数据 (限制5条用于测试)
+    // 先检查总数据量
+    console.log('检查数据库中岗位总数...');
+    const totalCount = await jobsPrisma.job_posting.count();
+    console.log(`数据库中共有 ${totalCount} 条岗位记录`);
+    
+    // 获取岗位数据 (限制1000条用于测试)
     console.log('从PostgreSQL获取岗位数据...');
     const jobs = await jobsPrisma.job_posting.findMany({
-      take: 5,
+      take: 2000,
       orderBy: {
         topic_id: 'desc'
       }
     });
+    // console.log("🚀 ~ testRagService ~ jobs:", jobs);
     
     if (!jobs || jobs.length === 0) {
       console.log('没有找到岗位数据');

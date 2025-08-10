@@ -30,7 +30,7 @@ export type job_tag_relation = $Result.DefaultSelection<Prisma.$job_tag_relation
 export type tag = $Result.DefaultSelection<Prisma.$tagPayload>
 /**
  * Model user_info
- * 发���岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
+ * 发布岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
  */
 export type user_info = $Result.DefaultSelection<Prisma.$user_infoPayload>
 
@@ -1114,7 +1114,6 @@ export namespace Prisma {
   }
 
   export type Job_postingAvgAggregateOutputType = {
-    topic_id: number | null
     position_id: number | null
     view_count: number | null
     apply_count: number | null
@@ -1129,7 +1128,6 @@ export namespace Prisma {
   }
 
   export type Job_postingSumAggregateOutputType = {
-    topic_id: bigint | null
     position_id: bigint | null
     view_count: number | null
     apply_count: number | null
@@ -1144,7 +1142,7 @@ export namespace Prisma {
   }
 
   export type Job_postingMinAggregateOutputType = {
-    topic_id: bigint | null
+    topic_id: string | null
     content: string | null
     content2: string | null
     content3: string | null
@@ -1181,7 +1179,7 @@ export namespace Prisma {
   }
 
   export type Job_postingMaxAggregateOutputType = {
-    topic_id: bigint | null
+    topic_id: string | null
     content: string | null
     content2: string | null
     content3: string | null
@@ -1257,7 +1255,6 @@ export namespace Prisma {
 
 
   export type Job_postingAvgAggregateInputType = {
-    topic_id?: true
     position_id?: true
     view_count?: true
     apply_count?: true
@@ -1272,7 +1269,6 @@ export namespace Prisma {
   }
 
   export type Job_postingSumAggregateInputType = {
-    topic_id?: true
     position_id?: true
     view_count?: true
     apply_count?: true
@@ -1485,7 +1481,7 @@ export namespace Prisma {
   }
 
   export type Job_postingGroupByOutputType = {
-    topic_id: bigint
+    topic_id: string
     content: string | null
     content2: string | null
     content3: string | null
@@ -1656,7 +1652,7 @@ export namespace Prisma {
     name: "job_posting"
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
-      topic_id: bigint
+      topic_id: string
       content: string | null
       content2: string | null
       content3: string | null
@@ -2083,7 +2079,7 @@ export namespace Prisma {
    * Fields of the job_posting model
    */ 
   interface job_postingFieldRefs {
-    readonly topic_id: FieldRef<"job_posting", 'BigInt'>
+    readonly topic_id: FieldRef<"job_posting", 'String'>
     readonly content: FieldRef<"job_posting", 'String'>
     readonly content2: FieldRef<"job_posting", 'String'>
     readonly content3: FieldRef<"job_posting", 'String'>
@@ -2418,23 +2414,21 @@ export namespace Prisma {
   }
 
   export type Job_tag_relationAvgAggregateOutputType = {
-    topic_id: number | null
     tag_id: number | null
   }
 
   export type Job_tag_relationSumAggregateOutputType = {
-    topic_id: bigint | null
     tag_id: bigint | null
   }
 
   export type Job_tag_relationMinAggregateOutputType = {
-    topic_id: bigint | null
+    topic_id: string | null
     tag_id: bigint | null
     ffrom: string | null
   }
 
   export type Job_tag_relationMaxAggregateOutputType = {
-    topic_id: bigint | null
+    topic_id: string | null
     tag_id: bigint | null
     ffrom: string | null
   }
@@ -2448,12 +2442,10 @@ export namespace Prisma {
 
 
   export type Job_tag_relationAvgAggregateInputType = {
-    topic_id?: true
     tag_id?: true
   }
 
   export type Job_tag_relationSumAggregateInputType = {
-    topic_id?: true
     tag_id?: true
   }
 
@@ -2563,7 +2555,7 @@ export namespace Prisma {
   }
 
   export type Job_tag_relationGroupByOutputType = {
-    topic_id: bigint
+    topic_id: string
     tag_id: bigint
     ffrom: string | null
     _count: Job_tag_relationCountAggregateOutputType | null
@@ -2610,7 +2602,7 @@ export namespace Prisma {
     name: "job_tag_relation"
     objects: {}
     scalars: $Extensions.GetPayloadResult<{
-      topic_id: bigint
+      topic_id: string
       tag_id: bigint
       ffrom: string | null
     }, ExtArgs["result"]["job_tag_relation"]>
@@ -3006,7 +2998,7 @@ export namespace Prisma {
    * Fields of the job_tag_relation model
    */ 
   interface job_tag_relationFieldRefs {
-    readonly topic_id: FieldRef<"job_tag_relation", 'BigInt'>
+    readonly topic_id: FieldRef<"job_tag_relation", 'String'>
     readonly tag_id: FieldRef<"job_tag_relation", 'BigInt'>
     readonly ffrom: FieldRef<"job_tag_relation", 'String'>
   }
@@ -5351,20 +5343,6 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'BigInt'
-   */
-  export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
-    
-
-
-  /**
-   * Reference to a field of type 'BigInt[]'
-   */
-  export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
-    
-
-
-  /**
    * Reference to a field of type 'String'
    */
   export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String'>
@@ -5375,6 +5353,20 @@ export namespace Prisma {
    * Reference to a field of type 'String[]'
    */
   export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'BigInt'
+   */
+  export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
+    
+
+
+  /**
+   * Reference to a field of type 'BigInt[]'
+   */
+  export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
     
 
 
@@ -5434,7 +5426,7 @@ export namespace Prisma {
     AND?: job_postingWhereInput | job_postingWhereInput[]
     OR?: job_postingWhereInput[]
     NOT?: job_postingWhereInput | job_postingWhereInput[]
-    topic_id?: BigIntFilter<"job_posting"> | bigint | number
+    topic_id?: StringFilter<"job_posting"> | string
     content?: StringNullableFilter<"job_posting"> | string | null
     content2?: StringNullableFilter<"job_posting"> | string | null
     content3?: StringNullableFilter<"job_posting"> | string | null
@@ -5508,7 +5500,7 @@ export namespace Prisma {
   }
 
   export type job_postingWhereUniqueInput = Prisma.AtLeast<{
-    topic_id?: bigint | number
+    topic_id?: string
     AND?: job_postingWhereInput | job_postingWhereInput[]
     OR?: job_postingWhereInput[]
     NOT?: job_postingWhereInput | job_postingWhereInput[]
@@ -5593,7 +5585,7 @@ export namespace Prisma {
     AND?: job_postingScalarWhereWithAggregatesInput | job_postingScalarWhereWithAggregatesInput[]
     OR?: job_postingScalarWhereWithAggregatesInput[]
     NOT?: job_postingScalarWhereWithAggregatesInput | job_postingScalarWhereWithAggregatesInput[]
-    topic_id?: BigIntWithAggregatesFilter<"job_posting"> | bigint | number
+    topic_id?: StringWithAggregatesFilter<"job_posting"> | string
     content?: StringNullableWithAggregatesFilter<"job_posting"> | string | null
     content2?: StringNullableWithAggregatesFilter<"job_posting"> | string | null
     content3?: StringNullableWithAggregatesFilter<"job_posting"> | string | null
@@ -5633,7 +5625,7 @@ export namespace Prisma {
     AND?: job_tag_relationWhereInput | job_tag_relationWhereInput[]
     OR?: job_tag_relationWhereInput[]
     NOT?: job_tag_relationWhereInput | job_tag_relationWhereInput[]
-    topic_id?: BigIntFilter<"job_tag_relation"> | bigint | number
+    topic_id?: StringFilter<"job_tag_relation"> | string
     tag_id?: BigIntFilter<"job_tag_relation"> | bigint | number
     ffrom?: StringNullableFilter<"job_tag_relation"> | string | null
   }
@@ -5649,7 +5641,7 @@ export namespace Prisma {
     AND?: job_tag_relationWhereInput | job_tag_relationWhereInput[]
     OR?: job_tag_relationWhereInput[]
     NOT?: job_tag_relationWhereInput | job_tag_relationWhereInput[]
-    topic_id?: BigIntFilter<"job_tag_relation"> | bigint | number
+    topic_id?: StringFilter<"job_tag_relation"> | string
     tag_id?: BigIntFilter<"job_tag_relation"> | bigint | number
     ffrom?: StringNullableFilter<"job_tag_relation"> | string | null
   }, "topic_id_tag_id">
@@ -5669,7 +5661,7 @@ export namespace Prisma {
     AND?: job_tag_relationScalarWhereWithAggregatesInput | job_tag_relationScalarWhereWithAggregatesInput[]
     OR?: job_tag_relationScalarWhereWithAggregatesInput[]
     NOT?: job_tag_relationScalarWhereWithAggregatesInput | job_tag_relationScalarWhereWithAggregatesInput[]
-    topic_id?: BigIntWithAggregatesFilter<"job_tag_relation"> | bigint | number
+    topic_id?: StringWithAggregatesFilter<"job_tag_relation"> | string
     tag_id?: BigIntWithAggregatesFilter<"job_tag_relation"> | bigint | number
     ffrom?: StringNullableWithAggregatesFilter<"job_tag_relation"> | string | null
   }
@@ -5818,7 +5810,7 @@ export namespace Prisma {
   }
 
   export type job_postingCreateInput = {
-    topic_id: bigint | number
+    topic_id: string
     content?: string | null
     content2?: string | null
     content3?: string | null
@@ -5855,7 +5847,7 @@ export namespace Prisma {
   }
 
   export type job_postingUncheckedCreateInput = {
-    topic_id: bigint | number
+    topic_id: string
     content?: string | null
     content2?: string | null
     content3?: string | null
@@ -5892,7 +5884,7 @@ export namespace Prisma {
   }
 
   export type job_postingUpdateInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     content?: NullableStringFieldUpdateOperationsInput | string | null
     content2?: NullableStringFieldUpdateOperationsInput | string | null
     content3?: NullableStringFieldUpdateOperationsInput | string | null
@@ -5929,7 +5921,7 @@ export namespace Prisma {
   }
 
   export type job_postingUncheckedUpdateInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     content?: NullableStringFieldUpdateOperationsInput | string | null
     content2?: NullableStringFieldUpdateOperationsInput | string | null
     content3?: NullableStringFieldUpdateOperationsInput | string | null
@@ -5966,7 +5958,7 @@ export namespace Prisma {
   }
 
   export type job_postingCreateManyInput = {
-    topic_id: bigint | number
+    topic_id: string
     content?: string | null
     content2?: string | null
     content3?: string | null
@@ -6003,7 +5995,7 @@ export namespace Prisma {
   }
 
   export type job_postingUpdateManyMutationInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     content?: NullableStringFieldUpdateOperationsInput | string | null
     content2?: NullableStringFieldUpdateOperationsInput | string | null
     content3?: NullableStringFieldUpdateOperationsInput | string | null
@@ -6040,7 +6032,7 @@ export namespace Prisma {
   }
 
   export type job_postingUncheckedUpdateManyInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     content?: NullableStringFieldUpdateOperationsInput | string | null
     content2?: NullableStringFieldUpdateOperationsInput | string | null
     content3?: NullableStringFieldUpdateOperationsInput | string | null
@@ -6077,43 +6069,43 @@ export namespace Prisma {
   }
 
   export type job_tag_relationCreateInput = {
-    topic_id: bigint | number
+    topic_id: string
     tag_id: bigint | number
     ffrom?: string | null
   }
 
   export type job_tag_relationUncheckedCreateInput = {
-    topic_id: bigint | number
+    topic_id: string
     tag_id: bigint | number
     ffrom?: string | null
   }
 
   export type job_tag_relationUpdateInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     tag_id?: BigIntFieldUpdateOperationsInput | bigint | number
     ffrom?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type job_tag_relationUncheckedUpdateInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     tag_id?: BigIntFieldUpdateOperationsInput | bigint | number
     ffrom?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type job_tag_relationCreateManyInput = {
-    topic_id: bigint | number
+    topic_id: string
     tag_id: bigint | number
     ffrom?: string | null
   }
 
   export type job_tag_relationUpdateManyMutationInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     tag_id?: BigIntFieldUpdateOperationsInput | bigint | number
     ffrom?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type job_tag_relationUncheckedUpdateManyInput = {
-    topic_id?: BigIntFieldUpdateOperationsInput | bigint | number
+    topic_id?: StringFieldUpdateOperationsInput | string
     tag_id?: BigIntFieldUpdateOperationsInput | bigint | number
     ffrom?: NullableStringFieldUpdateOperationsInput | string | null
   }
@@ -6279,15 +6271,19 @@ export namespace Prisma {
     followed?: NullableBoolFieldUpdateOperationsInput | boolean | null
   }
 
-  export type BigIntFilter<$PrismaModel = never> = {
-    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
+  export type StringFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringFilter<$PrismaModel> | string
   }
 
   export type StringNullableFilter<$PrismaModel = never> = {
@@ -6303,21 +6299,6 @@ export namespace Prisma {
     endsWith?: string | StringFieldRefInput<$PrismaModel>
     mode?: QueryMode
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
-  }
-
-  export type StringFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringFilter<$PrismaModel> | string
   }
 
   export type BigIntNullableFilter<$PrismaModel = never> = {
@@ -6401,7 +6382,6 @@ export namespace Prisma {
   }
 
   export type job_postingAvgOrderByAggregateInput = {
-    topic_id?: SortOrder
     position_id?: SortOrder
     view_count?: SortOrder
     apply_count?: SortOrder
@@ -6490,7 +6470,6 @@ export namespace Prisma {
   }
 
   export type job_postingSumOrderByAggregateInput = {
-    topic_id?: SortOrder
     position_id?: SortOrder
     view_count?: SortOrder
     apply_count?: SortOrder
@@ -6502,40 +6481,6 @@ export namespace Prisma {
     max_salary?: SortOrder
     lever_id?: SortOrder
     status?: SortOrder
-  }
-
-  export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedBigIntFilter<$PrismaModel>
-    _min?: NestedBigIntFilter<$PrismaModel>
-    _max?: NestedBigIntFilter<$PrismaModel>
-  }
-
-  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
-    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedStringNullableFilter<$PrismaModel>
-    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -6554,6 +6499,24 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
+  }
+
+  export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    mode?: QueryMode
+    not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedStringNullableFilter<$PrismaModel>
+    _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
   export type BigIntNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -6612,8 +6575,19 @@ export namespace Prisma {
     _max?: NestedDecimalNullableFilter<$PrismaModel>
   }
 
+  export type BigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
+  }
+
   export type job_tag_relationTopic_idTag_idCompoundUniqueInput = {
-    topic_id: bigint | number
+    topic_id: string
     tag_id: bigint | number
   }
 
@@ -6624,7 +6598,6 @@ export namespace Prisma {
   }
 
   export type job_tag_relationAvgOrderByAggregateInput = {
-    topic_id?: SortOrder
     tag_id?: SortOrder
   }
 
@@ -6641,8 +6614,23 @@ export namespace Prisma {
   }
 
   export type job_tag_relationSumOrderByAggregateInput = {
-    topic_id?: SortOrder
     tag_id?: SortOrder
+  }
+
+  export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
   }
 
   export type tagCountOrderByAggregateInput = {
@@ -6742,20 +6730,12 @@ export namespace Prisma {
     create_time?: SortOrder
   }
 
-  export type BigIntFieldUpdateOperationsInput = {
-    set?: bigint | number
-    increment?: bigint | number
-    decrement?: bigint | number
-    multiply?: bigint | number
-    divide?: bigint | number
+  export type StringFieldUpdateOperationsInput = {
+    set?: string
   }
 
   export type NullableStringFieldUpdateOperationsInput = {
     set?: string | null
-  }
-
-  export type StringFieldUpdateOperationsInput = {
-    set?: string
   }
 
   export type NullableBigIntFieldUpdateOperationsInput = {
@@ -6786,29 +6766,12 @@ export namespace Prisma {
     divide?: Decimal | DecimalJsLike | number | string
   }
 
-  export type NestedBigIntFilter<$PrismaModel = never> = {
-    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
-  }
-
-  export type NestedStringNullableFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringNullableFilter<$PrismaModel> | string | null
+  export type BigIntFieldUpdateOperationsInput = {
+    set?: bigint | number
+    increment?: bigint | number
+    decrement?: bigint | number
+    multiply?: bigint | number
+    divide?: bigint | number
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -6823,6 +6786,20 @@ export namespace Prisma {
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
     not?: NestedStringFilter<$PrismaModel> | string
+  }
+
+  export type NestedStringNullableFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel> | null
+    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type NestedBigIntNullableFilter<$PrismaModel = never> = {
@@ -6863,20 +6840,21 @@ export namespace Prisma {
     not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
   }
 
-  export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
-    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
-    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+  export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: string | StringFieldRefInput<$PrismaModel>
+    in?: string[] | ListStringFieldRefInput<$PrismaModel>
+    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    lt?: string | StringFieldRefInput<$PrismaModel>
+    lte?: string | StringFieldRefInput<$PrismaModel>
+    gt?: string | StringFieldRefInput<$PrismaModel>
+    gte?: string | StringFieldRefInput<$PrismaModel>
+    contains?: string | StringFieldRefInput<$PrismaModel>
+    startsWith?: string | StringFieldRefInput<$PrismaModel>
+    endsWith?: string | StringFieldRefInput<$PrismaModel>
+    not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedBigIntFilter<$PrismaModel>
-    _min?: NestedBigIntFilter<$PrismaModel>
-    _max?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedStringFilter<$PrismaModel>
+    _max?: NestedStringFilter<$PrismaModel>
   }
 
   export type NestedIntFilter<$PrismaModel = never> = {
@@ -6888,17 +6866,6 @@ export namespace Prisma {
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
     not?: NestedIntFilter<$PrismaModel> | number
-  }
-
-  export type NestedFloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -6916,23 +6883,6 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
     _max?: NestedStringNullableFilter<$PrismaModel>
-  }
-
-  export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
-    lt?: string | StringFieldRefInput<$PrismaModel>
-    lte?: string | StringFieldRefInput<$PrismaModel>
-    gt?: string | StringFieldRefInput<$PrismaModel>
-    gte?: string | StringFieldRefInput<$PrismaModel>
-    contains?: string | StringFieldRefInput<$PrismaModel>
-    startsWith?: string | StringFieldRefInput<$PrismaModel>
-    endsWith?: string | StringFieldRefInput<$PrismaModel>
-    not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedStringFilter<$PrismaModel>
-    _max?: NestedStringFilter<$PrismaModel>
   }
 
   export type NestedBigIntNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -7000,6 +6950,44 @@ export namespace Prisma {
     _sum?: NestedDecimalNullableFilter<$PrismaModel>
     _min?: NestedDecimalNullableFilter<$PrismaModel>
     _max?: NestedDecimalNullableFilter<$PrismaModel>
+  }
+
+  export type NestedBigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
+  }
+
+  export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
+  }
+
+  export type NestedFloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
   }
 
 

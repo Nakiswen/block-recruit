@@ -254,7 +254,7 @@ export default function Contact() {
               )}
               
               <div>
-                <Button
+                <Button 
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full flex justify-center py-2 px-4"

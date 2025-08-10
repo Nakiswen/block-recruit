@@ -1,7 +1,7 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../apps/api/src/prisma/web3jobs"
-  binaryTargets = ["native", "darwin-arm64", "windows", " "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,7 +11,7 @@ datasource db {
 
 /// 职位发布表 - 存储从其他招聘网站爬取的职位信息
 model job_posting {
-  topic_id             BigInt   @id                 // 主题ID，作为主键
+  topic_id             String   @id @db.VarChar(32) // 主题ID，作为主键
   content              String?                      // 职位描述内容1
   content2             String?                      // 职位描述内容2
   content3             String?                      // 职位描述内容3
@@ -49,7 +49,7 @@ model job_posting {
 
 /// 职位标签关系表 - 存储职位与标签的多对多关系
 model job_tag_relation {
-  topic_id BigInt                                  // 职位主题ID
+  topic_id String  @db.VarChar(32)                // 职位主题ID
   tag_id   BigInt                                  // 标签ID
   ffrom    String? @db.VarChar(50)                 // 数据来源
 

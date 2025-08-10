@@ -63,8 +63,8 @@ export interface JobStructuredInfo {
   preferredSkills: string[];
   parsedRequiredSkills: string[];
   parsedPreferredSkills: string[];
-  experienceYears: number;
-  educationLevel: string;
+  experienceYears: number | null;
+  educationLevel: string | null;
   industry: string;
   jobLevel: string;
   keyResponsibilities: string[];
@@ -79,8 +79,8 @@ export interface JobStructuredInfo {
  */
 export interface ResumeStructuredInfo {
   skills: string[];
-  experienceYears: number;
-  educationLevel: string;
+  experienceYears: number | null;
+  educationLevel: string | null;
   industryExperience: string[];
   location: string;
   keyAchievements: string[];
@@ -168,8 +168,8 @@ class LangChainAIService implements AIService {
           preferredSkills: z.array(z.string()),
           parsedRequiredSkills: z.array(z.string()),
           parsedPreferredSkills: z.array(z.string()),
-          experienceYears: z.number(),
-          educationLevel: z.string(),
+          experienceYears: z.number().nullable().default(0),
+          educationLevel: z.string().nullable().default(''),
           industry: z.string(),
           jobLevel: z.string(),
           keyResponsibilities: z.array(z.string()),
@@ -275,8 +275,8 @@ class LangChainAIService implements AIService {
       const parser = StructuredOutputParser.fromZodSchema(
         z.object({
           skills: z.array(z.string()),
-          experienceYears: z.number(),
-          educationLevel: z.string(),
+          experienceYears: z.number().nullable().default(0),
+          educationLevel: z.string().nullable().default(''),
           industryExperience: z.array(z.string()),
           location: z.string(),
           keyAchievements: z.array(z.string()),
@@ -689,8 +689,8 @@ ${resume.content}
       preferredSkills: jobInfo.preferredSkills || [],
       parsedRequiredSkills: this.normalizeSkills(jobInfo.parsedRequiredSkills || []),
       parsedPreferredSkills: this.normalizeSkills(jobInfo.parsedPreferredSkills || []),
-      experienceYears: Math.max(0, jobInfo.experienceYears || 0),
-      educationLevel: this.normalizeEducationLevel(jobInfo.educationLevel),
+      experienceYears: Math.max(0, jobInfo.experienceYears ?? 0),
+      educationLevel: this.normalizeEducationLevel(jobInfo.educationLevel ?? ''),
       industry: jobInfo.industry || '',
       jobLevel: this.normalizeJobLevel(jobInfo.jobLevel),
       keyResponsibilities: jobInfo.keyResponsibilities || [],
@@ -708,8 +708,8 @@ ${resume.content}
     return {
       ...resumeInfo,
       skills: this.normalizeSkills(resumeInfo.skills),
-      experienceYears: Math.max(0, resumeInfo.experienceYears || 0),
-      educationLevel: this.normalizeEducationLevel(resumeInfo.educationLevel),
+      experienceYears: Math.max(0, resumeInfo.experienceYears ?? 0),
+      educationLevel: this.normalizeEducationLevel(resumeInfo.educationLevel ?? ''),
       industryExperience: (resumeInfo.industryExperience || []).filter(Boolean),
       location: resumeInfo.location || '',
       keyAchievements: resumeInfo.keyAchievements || [],

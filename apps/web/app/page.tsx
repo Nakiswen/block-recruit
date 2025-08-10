@@ -335,8 +335,8 @@ export default function Home() {
       window.removeEventListener('scroll', handleScroll);
 
       // 移除以太坊钱包事件监听
-      if (typeof window.ethereum !== 'undefined') {
-        (window.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
+      if (typeof window?.ethereum !== 'undefined') {
+        (window?.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
       }
     };
   }, []); // 移除fetchUserInfo依赖，避免自动调用
@@ -837,7 +837,7 @@ export default function Home() {
                   ></div>
                 </div>
                 <p className="opacity-80">
-                  正在分析您的简历并匹配最适合的岗位 ({matchingProgress}%)
+                  正在分析您的简历并匹配最适合的岗位 ({Math.floor(matchingProgress)}%)
                 </p>
               </div>
             ) : (

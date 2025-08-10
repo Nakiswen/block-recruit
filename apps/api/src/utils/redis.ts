@@ -1,4 +1,8 @@
 import Redis from 'ioredis';
+import * as dotenv from 'dotenv';
+
+// 加载环境变量
+dotenv.config();
 
 // 创建Redis实例或模拟实例
 let redis: Redis;
@@ -8,17 +12,16 @@ try {
   redis = new Redis({
     host: process.env.REDIS_HOST || '127.0.0.1',
     port: Number(process.env.REDIS_PORT || 6379),
-    // 只有在设置了密码时才添加用户名
-    ...(process.env.REDIS_PASSWORD ? { username: 'default' } : {}), 
     password: process.env.REDIS_PASSWORD, // 如有密码请通过环境变量设置
-    connectTimeout: 5000, // 连接超时时间
-    maxRetriesPerRequest: 1, // 减少重试次数
+    connectTimeout: 10000, // 连接超时时间
+    maxRetriesPerRequest: 3, // 增加重试次数
     retryStrategy: (times) => {
-      // 最多重试3次，每次间隔1秒
-      if (times > 3) return null;
-      return 1000;
+      // 最多重试5次，指数退避
+      if (times > 5) return null;
+      return Math.min(times * 2000, 10000); // 2s, 4s, 6s, 8s, 10s
     },
-    lazyConnect: true, // 懒连接，不在初始化时连接
+    lazyConnect: false, // 立即连接
+    keepAlive: true, // 保持连接活跃
   });
 
   // 添加错误处理
@@ -30,11 +33,6 @@ try {
   // 添加连接成功回调
   redis.on('connect', () => {
     console.log('Redis连接成功');
-  });
-  
-  // 尝试连接
-  redis.connect().catch((err) => {
-    console.warn(`Redis连接失败，功能将受限: ${err.message}`);
   });
   
 } catch (error) {

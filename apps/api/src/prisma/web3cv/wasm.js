@@ -190,6 +190,78 @@ exports.Prisma.NFTProofScalarFieldEnum = {
   mintedAt: 'mintedAt'
 };
 
+exports.Prisma.Job_postingScalarFieldEnum = {
+  topic_id: 'topic_id',
+  content: 'content',
+  content2: 'content2',
+  content3: 'content3',
+  content5: 'content5',
+  email: 'email',
+  phone: 'phone',
+  wechat: 'wechat',
+  telegram: 'telegram',
+  position_name: 'position_name',
+  position_id: 'position_id',
+  view_count: 'view_count',
+  applied: 'applied',
+  apply_count: 'apply_count',
+  create_time: 'create_time',
+  url: 'url',
+  work_type_id: 'work_type_id',
+  work_type_name: 'work_type_name',
+  office_mode_id: 'office_mode_id',
+  office_mode_name: 'office_mode_name',
+  company: 'company',
+  company_introduction: 'company_introduction',
+  company_size_name: 'company_size_name',
+  company_logo: 'company_logo',
+  company_website: 'company_website',
+  company_id: 'company_id',
+  min_salary: 'min_salary',
+  max_salary: 'max_salary',
+  lever_id: 'lever_id',
+  lever_name: 'lever_name',
+  location: 'location',
+  base: 'base',
+  ffrom: 'ffrom',
+  status: 'status'
+};
+
+exports.Prisma.Job_tag_relationScalarFieldEnum = {
+  topic_id: 'topic_id',
+  tag_id: 'tag_id',
+  ffrom: 'ffrom'
+};
+
+exports.Prisma.TagScalarFieldEnum = {
+  tag_id: 'tag_id',
+  tag_name: 'tag_name',
+  ffrom: 'ffrom'
+};
+
+exports.Prisma.User_infoScalarFieldEnum = {
+  id: 'id',
+  nickname: 'nickname',
+  avatar: 'avatar',
+  small_avatar: 'small_avatar',
+  topic_count: 'topic_count',
+  comment_count: 'comment_count',
+  fans_count: 'fans_count',
+  follow_count: 'follow_count',
+  score: 'score',
+  description: 'description',
+  create_time: 'create_time',
+  wallet_address: 'wallet_address',
+  ffrom: 'ffrom',
+  followed: 'followed'
+};
+
+exports.Prisma.Job_user_relationScalarFieldEnum = {
+  topic_id: 'topic_id',
+  user_id: 'user_id',
+  ffrom: 'ffrom'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -227,7 +299,12 @@ exports.Prisma.ModelName = {
   Resume: 'Resume',
   ResumeAnalysis: 'ResumeAnalysis',
   Application: 'Application',
-  NFTProof: 'NFTProof'
+  NFTProof: 'NFTProof',
+  job_posting: 'job_posting',
+  job_tag_relation: 'job_tag_relation',
+  tag: 'tag',
+  user_info: 'user_info',
+  job_user_relation: 'job_user_relation'
 };
 
 /**

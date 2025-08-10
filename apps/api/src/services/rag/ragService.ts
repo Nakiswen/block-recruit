@@ -82,7 +82,7 @@ export const ragService = {
     try {
       // 获取岗位数据
       const jobs = await jobsPrisma.job_posting.findMany({
-        where: { topic_id: { in: jobIds.map(id => BigInt(id)) } }
+        where: { topic_id: { in: jobIds } }
       });
 
       if (!jobs.length) {
@@ -350,7 +350,7 @@ export const ragService = {
             
             // 获取完整的岗位信息
             const job = await jobsPrisma.job_posting.findUnique({
-              where: { topic_id: BigInt(jobId) }
+              where: { topic_id: jobId }
             });
             
             if (!job) {
@@ -447,7 +447,7 @@ export const ragService = {
     // 1. 获取岗位向量
     let jobVector = await this.getJobVector(jobId);
     if (!jobVector?.vector) {
-      const jobData = await jobsPrisma.job_posting.findUnique({ where: { topic_id: BigInt(jobId) }});
+      const jobData = await jobsPrisma.job_posting.findUnique({ where: { topic_id: jobId }});
       if (!jobData) throw new Error(`找不到ID为 ${jobId} 的岗位`);
       await this.processJob(jobData as unknown as Job);
       jobVector = await this.getJobVector(jobId);
@@ -464,7 +464,7 @@ export const ragService = {
     // 3. AI 增强分析
     const resumeIds = searchResults.matches.map(match => match.id);
     const resumes = await resumePrisma.resume.findMany({ where: { id: { in: resumeIds } } });
-    const job = await jobsPrisma.job_posting.findUnique({ where: { topic_id: BigInt(jobId) }});
+    const job = await jobsPrisma.job_posting.findUnique({ where: { topic_id: jobId }});
     if (!job) throw new Error(`找不到ID为 ${jobId} 的岗位`);
 
     // 将岗位数据转换为AI服务需要的格式，避免每个简历都重新提取岗位结构化数据
@@ -949,7 +949,7 @@ export const ragService = {
       // 步骤 5: 获取原始岗位数据（不包含向量）
       const jobIds = matches.map(match => match.job.id);
       const rawJobsData = await jobsPrisma.job_posting.findMany({
-        where: { topic_id: { in: jobIds.map(id => BigInt(id)) } }
+        where: { topic_id: { in: jobIds } }
       });
       
       // 按照匹配分数排序原始岗位数据
@@ -1006,7 +1006,7 @@ export const ragService = {
       
       // 获取岗位数据
       const job = await jobsPrisma.job_posting.findUnique({
-        where: { topic_id: BigInt(jobId) }
+        where: { topic_id: jobId }
       });
       
       if (!job) {
