@@ -718,7 +718,7 @@ export default function Home() {
                   <p className="text-gray-600">连接您的Web3钱包，开始去中心化求职体验</p>
 
                   {/* 连接线 - 仅在大屏幕显示 */}
-                  <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
+                  <div className="hidden md:block absolute top-8 left-full w-12 h-0.5 bg-gradient-to-r from-indigo-400 to-purple-400 z-10"></div>
                 </div>
 
                 <div className="relative text-center">
@@ -729,7 +729,7 @@ export default function Home() {
                   <p className="text-gray-600">上传您的简历，我们将自动提取关键信息</p>
 
                   {/* 连接线 */}
-                  <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
+                  <div className="hidden md:block absolute top-8 left-full w-12 h-0.5 bg-gradient-to-r from-indigo-400 to-purple-400 z-10"></div>
                 </div>
 
                 {/* 第三步：生成证明 - 已注释掉 */}
