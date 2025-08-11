@@ -20,9 +20,10 @@ const API_BASE_PATH = '/api';
 
 /**
  * 连接以太坊钱包（MetaMask或其他浏览器钱包）
+ * @param walletType 钱包类型（可选）
  * @returns 钱包连接结果，包含地址和provider
  */
-export async function connectWallet(): Promise<ConnectWalletResult> {
+export async function connectWallet(walletType?: string): Promise<ConnectWalletResult> {
   try {
     // 检查是否有以太坊提供者
     if (typeof window === 'undefined' || !window.ethereum) {
@@ -32,8 +33,20 @@ export async function connectWallet(): Promise<ConnectWalletResult> {
       };
     }
 
+    let ethereum = window.ethereum;
+
+    // 根据钱包类型选择特定的提供者
+    if (walletType === 'metamask' && window.ethereum?.isMetaMask) {
+      ethereum = window.ethereum;
+    } else if (walletType === 'coinbase' && window.ethereum?.isCoinbaseWallet) {
+      ethereum = window.ethereum;
+    } else if (walletType === 'walletconnect') {
+      // WalletConnect 通常通过第三方库实现，这里保持通用逻辑
+      ethereum = window.ethereum;
+    }
+
     // 请求用户连接钱包
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
 
     if (accounts.length === 0) {
@@ -279,6 +292,10 @@ export async function isWalletConnected(): Promise<boolean> {
 // 添加全局类型声明
 declare global {
   interface Window {
-    ethereum?: Record<string, unknown>;
+    ethereum?: {
+      isMetaMask?: boolean;
+      isCoinbaseWallet?: boolean;
+      [key: string]: unknown;
+    } & Record<string, unknown>;
   }
 }

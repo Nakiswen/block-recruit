@@ -11,6 +11,13 @@ import {
   currentResumeIdAtom,
   resumeProcessingStatusAtom,
 } from '../store/matchedJobsAtom';
+import {
+  walletStateAtom,
+  openWalletModalAtom,
+  loadWalletStateAtom,
+  connectWalletSuccessAtom,
+  disconnectWalletAtom,
+} from '../../../store/walletAtoms';
 import { pollWithInterval, HybridProgressManager } from '../utils';
 
 // 定义NFT类型
@@ -99,7 +106,6 @@ const PRICING_PLANS = [
 ];
 
 export default function Home() {
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [resumeUploaded, setResumeUploaded] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -109,6 +115,13 @@ export default function Home() {
   const [activePage, setActivePage] = useState('home');
   const [activeSection, setActiveSection] = useState('');
   const [matchingStarted, setMatchingStarted] = useState(false);
+  
+  // 钱包状态管理
+  const [walletState] = useAtom(walletStateAtom);
+  const [, openWalletModal] = useAtom(openWalletModalAtom);
+  const [, loadWalletState] = useAtom(loadWalletStateAtom);
+  const [, connectWalletSuccess] = useAtom(connectWalletSuccessAtom);
+  const [, disconnectWallet] = useAtom(disconnectWalletAtom);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [, setIsLoading] = useState(false);
 
@@ -223,9 +236,8 @@ export default function Home() {
 
   // 修复useEffect依赖问题
   useEffect(() => {
-    // 检查本地存储的钱包连接状态 - 仅读取状态，不发起连接
-    const walletConnected = localStorage.getItem('walletAuth') === 'true';
-    setIsWalletConnected(walletConnected);
+    // 从 localStorage 恢复钱包状态
+    loadWalletState();
 
     // 检查是否有已上传简历的标志
     const hasUploadedResume = localStorage.getItem('resumeUploaded') === 'true';
@@ -248,7 +260,7 @@ export default function Home() {
         localStorage.removeItem('token');
         localStorage.removeItem('walletAuth');
         localStorage.removeItem('walletAuthAddress');
-        setIsWalletConnected(false);
+        disconnectWallet();
       } else {
         // 用户切换了账户，使用新地址重新登录
         const newAddress = accounts[0];
@@ -266,10 +278,15 @@ export default function Home() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'walletAuth') {
         const walletConnected = e.newValue === 'true';
-        setIsWalletConnected(walletConnected);
         if (walletConnected) {
           // 钱包已连接，但不自动获取用户信息
           // 用户可以通过点击相关按钮来获取信息
+          const savedAddress = localStorage.getItem('walletAuthAddress');
+          if (savedAddress) {
+            connectWalletSuccess({ address: savedAddress });
+          }
+        } else {
+          disconnectWallet();
         }
       } else if (e.key === 'resumeUploaded') {
         const resumeUploaded = e.newValue === 'true';
@@ -284,9 +301,10 @@ export default function Home() {
     const handleWalletEvent = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail && detail.connected !== undefined) {
-        setIsWalletConnected(detail.connected);
-        if (detail.connected) {
-          // 钱包已连接，但不自动获取用户信息
+        if (detail.connected && detail.address) {
+          connectWalletSuccess({ address: detail.address });
+        } else if (!detail.connected) {
+          disconnectWallet();
         }
       }
     };
@@ -339,7 +357,7 @@ export default function Home() {
         (window?.ethereum as any).removeListener('accountsChanged', handleAccountsChanged);
       }
     };
-  }, []); // 移除fetchUserInfo依赖，避免自动调用
+  }, [connectWalletSuccess, disconnectWallet]); // 添加钱包状态管理函数依赖
 
   // 处理简历文件选择
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,7 +434,7 @@ export default function Home() {
 
   // 处理钱包连接
   const handleConnectWallet = () => {
-    // 实现钱包连接逻辑
+    openWalletModal();
   };
 
   // 首页内容
@@ -442,25 +460,23 @@ export default function Home() {
           </ul>
         </nav>
 
-        {/* 英雄区域 */}
+        {/* 英雄区域 + 核心功能 */}
         <section
           id="hero"
-          className="min-h-[90vh] flex flex-col md:flex-row items-center justify-center"
+          className="min-h-[90vh] flex flex-col lg:flex-row items-center justify-center gap-12"
         >
-          <div className="max-w-2xl space-y-6 py-20">
-            <h1 className="text-4xl md:text-6xl font-bold">
+          {/* 左侧：介绍内容 */}
+          <div className="max-w-xl space-y-6 py-20">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
               <span className="block">重新定义Web3</span>
               <span className="gradient-text block mt-2">招聘与求职体验</span>
             </h1>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
               BlockRecruit结合AI与区块链技术，将您的技能与经验转化为可验证的链上证明，
               为Web3人才提供精准岗位匹配，重塑去中心化招聘流程。
             </p>
 
             <div className="flex flex-wrap gap-4 pt-6">
-              <Button size="lg" onClick={() => scrollToSection('get-started')} className="px-8">
-                立即体验
-              </Button>
               <Button
                 variant="outline"
                 size="lg"
@@ -472,49 +488,181 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative w-full max-w-lg h-80 md:h-[500px]">
-            <div className="absolute -z-10 w-full h-full bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl transform rotate-3"></div>
-            <div className="w-full h-full bg-white rounded-2xl shadow-lg p-8 flex flex-col justify-center items-center">
-              <div className="w-24 h-24 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
-                <svg
-                  className="w-12 h-12 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  ></path>
-                </svg>
-              </div>
-              <div className="space-y-2 text-center">
-                <div className="font-semibold text-gray-900">成就NFT验证</div>
-                <div className="flex justify-center gap-2">
-                  <span className="text-2xl">🦈</span>
-                  <span className="text-2xl">🧠</span>
-                  <span className="text-2xl">🔥</span>
+          {/* 右侧：核心功能模块 */}
+          <div className="relative w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mb-4 mx-auto">
+                  <svg
+                    className="w-8 h-8 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
                 </div>
-                <div className="text-gray-600 text-sm">您的GitHub成就</div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">开始您的Web3求职之旅</h3>
+                <p className="text-gray-600">上传简历，AI智能匹配最适合的岗位</p>
               </div>
 
-              <div className="w-full h-px bg-gray-200 my-6"></div>
-
-              <div className="space-y-2 text-center">
-                <div className="font-semibold text-gray-900">组织身份验证</div>
-                <div className="flex justify-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                    Ξ
+              {!walletState.isConnected ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-4">第一步：连接钱包</div>
+                    <Button
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                      onClick={handleConnectWallet}
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+                      </svg>
+                      连接钱包
+                    </Button>
                   </div>
-                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                    OZ
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500">
+                      支持 MetaMask、WalletConnect 等主流钱包
+                    </div>
                   </div>
                 </div>
-                <div className="text-gray-600 text-sm">您的组织成员身份</div>
-              </div>
+              ) : !resumeUploaded ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-4">第二步：上传简历</div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label
+                      htmlFor="resume-upload-hero"
+                      className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-all"
+                    >
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg
+                          className="w-8 h-8 mb-3 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          ></path>
+                        </svg>
+                        {resumeFile ? (
+                          <p className="mb-2 text-sm text-gray-600">
+                            <span className="font-semibold">{resumeFile.name}</span>
+                          </p>
+                        ) : (
+                          <p className="mb-2 text-sm text-gray-600">
+                            <span className="font-semibold">点击上传简历</span> 或拖放文件
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          支持PDF、DOC、DOCX格式，大小不超过5MB
+                        </p>
+                      </div>
+                      <input
+                        id="resume-upload-hero"
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/x-markdown"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                  </div>
+
+                  {uploadError && <div className="text-red-500 text-sm mb-4">{uploadError}</div>}
+
+                  <Button
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                    onClick={handleResumeUpload}
+                    disabled={!resumeFile || isUploading}
+                  >
+                    {isUploading ? (
+                      <div className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        正在上传...
+                      </div>
+                    ) : (
+                      '上传简历并开始匹配'
+                    )}
+                  </Button>
+                </div>
+              ) : matchingProgress < 100 ? (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600 mb-4">正在匹配中...</div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-4 mb-4 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${matchingProgress}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-sm text-gray-600 text-center">
+                    正在分析您的简历并匹配最适合的岗位 ({Math.floor(matchingProgress)}%)
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-lg font-semibold text-green-600 mb-2">匹配完成！</div>
+                    <p className="text-sm text-gray-600 mb-6">
+                      我们为您找到了 {matchedJobs.length} 个合适的Web3岗位
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <Button
+                      size="lg"
+                      className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                      onClick={() => {
+                        router.push('/jobs');
+                      }}
+                    >
+                      查看匹配岗位
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setActivePage('nfts')}
+                    >
+                      查看我的证明
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -560,46 +708,47 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-8">
-              <div className="relative">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4">
-                  1
+            <div className="flex justify-center">
+              <div className="grid md:grid-cols-3 gap-12 max-w-4xl">
+                <div className="relative text-center">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto">
+                    1
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">连接钱包</h3>
+                  <p className="text-gray-600">连接您的Web3钱包，开始去中心化求职体验</p>
+
+                  {/* 连接线 - 仅在大屏幕显示 */}
+                  <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">连接钱包</h3>
-                <p className="text-gray-600">连接您的Web3钱包，开始去中心化求职体验</p>
 
-                {/* 连接线 - 仅在大屏幕显示 */}
-                <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
-              </div>
+                <div className="relative text-center">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto">
+                    2
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">上传简历</h3>
+                  <p className="text-gray-600">上传您的简历，我们将自动提取关键信息</p>
 
-              <div className="relative">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4">
-                  2
+                  {/* 连接线 */}
+                  <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">上传简历</h3>
-                <p className="text-gray-600">上传您的简历，我们将自动提取关键信息</p>
 
-                {/* 连接线 */}
-                <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
-              </div>
+                {/* 第三步：生成证明 - 已注释掉 */}
+                {/* <div className="relative text-center">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto">
+                    3
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">生成证明</h3>
+                  <p className="text-gray-600">系统自动生成您的GitHub成就与组织身份NFT证明</p>
+                  <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
+                </div> */}
 
-              <div className="relative">
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4">
-                  3
+                <div className="text-center">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4 mx-auto">
+                    3
+                  </div>
+                  <h3 className="text-xl font-semibold mb-3">匹配岗位</h3>
+                  <p className="text-gray-600">AI分析简历并推荐最匹配的Web3岗位，一键投递</p>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">生成证明</h3>
-                <p className="text-gray-600">系统自动生成您的GitHub成就与组织身份NFT证明</p>
-
-                {/* 连接线 */}
-                <div className="hidden md:block absolute top-8 left-16 w-full h-0.5 bg-gradient-to-r from-indigo-200 to-transparent"></div>
-              </div>
-
-              <div>
-                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-16 h-16 flex items-center justify-center text-white text-2xl font-bold mb-4">
-                  4
-                </div>
-                <h3 className="text-xl font-semibold mb-3">匹配岗位</h3>
-                <p className="text-gray-600">AI分析简历并推荐最匹配的Web3岗位，一键投递</p>
               </div>
             </div>
           </div>
@@ -714,7 +863,7 @@ export default function Home() {
               连接钱包，上传简历，让AI为您找到最合适的Web3工作机会
             </p>
 
-            {!isWalletConnected ? (
+            {!walletState.isConnected ? (
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-8 max-w-md mx-auto">
                 <h3 className="text-xl font-semibold mb-4 text-white">第一步：连接钱包</h3>
                 <p className="mb-6 opacity-80">连接您的Web3钱包，开启去中心化求职体验</p>

@@ -2,17 +2,29 @@
 
 import {
   connectWallet,
-  disconnectWallet,
+  disconnectWallet as walletDisconnect,
   listenAccountChanges,
   listenChainChanges,
   getWalletSignature,
 } from '@/packages/web3-utils/wallet';
 import { WalletIcon } from '@heroicons/react/24/outline';
+import { useAtom } from 'jotai';
 import axios from 'axios';
 import React, { useCallback, useState, useEffect } from 'react';
 
 import Button from './Button';
 import WalletConnectModal from './WalletConnectModal';
+import {
+  walletStateAtom,
+  walletModalStateAtom,
+  openWalletModalAtom,
+  closeWalletModalAtom,
+  setWalletConnectingAtom,
+  setWalletErrorAtom,
+  connectWalletSuccessAtom,
+  disconnectWalletAtom,
+  loadWalletStateAtom,
+} from '../../../store/walletAtoms';
 
 interface WalletConnectProps {
   onConnect?: (address: string) => void;
@@ -28,12 +40,18 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   walletAddress: propsWalletAddress,
   apiUrl = '/api', // 默认使用相对路径
 }) => {
-  // 状态管理
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [walletAddress, setWalletAddress] = useState<string>(propsWalletAddress || '');
-  const [chainId, setChainId] = useState<number>();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Jotai 状态管理
+  const [walletState] = useAtom(walletStateAtom);
+  const [modalState] = useAtom(walletModalStateAtom);
+  const [, openModal] = useAtom(openWalletModalAtom);
+  const [, closeModal] = useAtom(closeWalletModalAtom);
+  const [, setConnecting] = useAtom(setWalletConnectingAtom);
+  const [, setError] = useAtom(setWalletErrorAtom);
+  const [, connectSuccess] = useAtom(connectWalletSuccessAtom);
+  const [, disconnectWallet] = useAtom(disconnectWalletAtom);
+  const [, loadWalletState] = useAtom(loadWalletStateAtom);
+
+  // 本地状态
   const [isVerifyingSession, setIsVerifyingSession] = useState(false);
 
   // 验证会话状态
@@ -80,51 +98,25 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
     [apiUrl]
   );
 
-  // 初始化 - 检查钱包是否已连接
+  // 初始化 - 从 localStorage 恢复钱包状态
   useEffect(() => {
-    const checkExistingConnection = async () => {
-      if (typeof window !== 'undefined') {
-        // 检查是否有保存的地址和签名
-        const savedAddress = localStorage.getItem('walletAuthAddress');
-        const savedAuth = localStorage.getItem('walletAuth');
-        const token = localStorage.getItem('token');
-
-        if (savedAddress && savedAuth && token) {
-          // 不立即验证会话，先显示已连接状态
-          setWalletAddress(savedAddress);
-          if (onConnect) {
-            onConnect(savedAddress);
-          }
-
-          // 延迟验证会话，避免页面加载时立即发送请求
-          setTimeout(async () => {
-            try {
-              // 先尝试验证会话有效性
-              const isSessionValid = await verifySession(token);
-
-              if (!isSessionValid) {
-                console.log('会话已过期，但保持钱包连接状态');
-              }
-            } catch (err) {
-              // 静默处理错误
-              console.warn('延迟验证会话时出错:', err);
-            }
-          }, 3000); // 延迟3秒验证
-
-          return;
-        }
-      }
-    };
-
-    checkExistingConnection();
-  }, [onConnect, verifySession]);
-
-  // 当props中的地址变化时更新本地状态
-  useEffect(() => {
-    if (propsWalletAddress && propsWalletAddress !== walletAddress) {
-      setWalletAddress(propsWalletAddress);
+    loadWalletState();
+    
+    // 如果钱包已连接，通知外部组件
+    if (walletState.isConnected && onConnect) {
+      onConnect(walletState.address);
     }
-  }, [propsWalletAddress, walletAddress]);
+  }, [loadWalletState, walletState.isConnected, walletState.address, onConnect]);
+
+  // 当props中的地址变化时同步到Jotai状态（向后兼容性支持）
+  useEffect(() => {
+    if (propsWalletAddress && propsWalletAddress !== walletState.address) {
+      connectSuccess({
+        address: propsWalletAddress,
+        chainId: walletState.chainId,
+      });
+    }
+  }, [propsWalletAddress, walletState.address, walletState.chainId, connectSuccess]);
 
   // 格式化钱包地址显示
   const formatAddress = useCallback((address: string) => {
@@ -133,13 +125,13 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   }, []);
 
   // 处理钱包选择
-  const handleSelectWallet = useCallback(async () => {
+  const handleSelectWallet = useCallback(async (walletType?: string) => {
     try {
-      setIsConnecting(true);
+      setConnecting(true);
       setError('');
-      setIsModalOpen(false);
+      closeModal();
 
-      const result = await connectWallet();
+      const result = await connectWallet(walletType);
 
       // 如果用户拒绝连接，静默处理
       if (result.error?.includes('User rejected') || result.error?.includes('user rejected')) {
@@ -152,9 +144,6 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
         return;
       }
 
-      setWalletAddress(result.address);
-      setChainId(result.chainId);
-
       // 确保获取签名用于身份验证
       if (result.provider && result.address) {
         try {
@@ -164,6 +153,13 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
         }
       }
 
+      // 更新 Jotai 状态
+      connectSuccess({
+        address: result.address,
+        chainId: result.chainId,
+      });
+
+      // 通知外部组件
       if (onConnect) {
         onConnect(result.address);
       }
@@ -184,16 +180,22 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
         setError('连接失败：' + errorMessage);
       }
     } finally {
-      setIsConnecting(false);
+      setConnecting(false);
     }
-  }, [onConnect]);
+  }, [onConnect, setConnecting, setError, closeModal, connectSuccess]);
 
   // 处理断开连接
   const handleDisconnect = useCallback(() => {
+    // 调用 web3-utils 钱包断开连接函数
+    walletDisconnect();
+    
+    // 更新 Jotai 状态
     disconnectWallet();
-    setWalletAddress('');
-    setChainId(undefined);
+    
+    // 清理错误状态
     setError('');
+    
+    // 通知外部组件
     if (onDisconnect) {
       onDisconnect();
     }
@@ -207,7 +209,7 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
         })
       );
     }
-  }, [onDisconnect]);
+  }, [onDisconnect, disconnectWallet, setError]);
 
   // 设置钱包事件监听
   React.useEffect(() => {
@@ -216,40 +218,49 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
       if (accounts.length === 0) {
         handleDisconnect();
       } else {
-        setWalletAddress(accounts[0]);
+        // 更新钱包状态
+        connectSuccess({
+          address: accounts[0],
+          chainId: walletState.chainId,
+        });
       }
     });
 
     // 监听链变化
     listenChainChanges((newChainId: string) => {
-      setChainId(parseInt(newChainId, 16));
+      const chainId = parseInt(newChainId, 16);
+      // 更新链ID
+      connectSuccess({
+        address: walletState.address,
+        chainId,
+      });
     });
-  }, [handleDisconnect]);
+  }, [handleDisconnect, connectSuccess, walletState.address, walletState.chainId]);
 
   return (
     <>
-      {error && !error.toLowerCase().includes('user rejected') && (
-        <div className="text-red-500 text-sm mb-2">{error}</div>
+      {modalState.error && !modalState.error.toLowerCase().includes('user rejected') && (
+        <div className="text-red-500 text-sm mb-2">{modalState.error}</div>
       )}
 
-      {!walletAddress ? (
+      {!walletState.isConnected ? (
         <Button
           variant="primary"
           size="sm"
-          onClick={() => setIsModalOpen(true)}
-          disabled={isConnecting || isVerifyingSession}
+          onClick={openModal}
+          disabled={modalState.isConnecting || isVerifyingSession}
           className="flex items-center"
         >
           <WalletIcon className="h-5 w-5 mr-2" />
-          {isConnecting ? '连接中...' : isVerifyingSession ? '验证中...' : '连接钱包'}
+          {modalState.isConnecting ? '连接中...' : isVerifyingSession ? '验证中...' : '连接钱包'}
         </Button>
       ) : (
         <div className="flex items-center">
           <span className="bg-green-100 text-green-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">
-            {chainId ? `Chain ID: ${chainId}` : '已连接'}
+            {walletState.chainId ? `Chain ID: ${walletState.chainId}` : '已连接'}
           </span>
           <span className="text-sm font-medium text-gray-700 mr-3">
-            {formatAddress(walletAddress)}
+            {formatAddress(walletState.address)}
           </span>
           <Button variant="outline" size="sm" onClick={handleDisconnect}>
             断开
@@ -258,8 +269,8 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
       )}
 
       <WalletConnectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
         onSelectWallet={handleSelectWallet}
       />
     </>
