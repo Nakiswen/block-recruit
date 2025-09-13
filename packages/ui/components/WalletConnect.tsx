@@ -38,7 +38,6 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   onConnect,
   onDisconnect,
   walletAddress: propsWalletAddress,
-  apiUrl = '/api', // 默认使用相对路径
 }) => {
   // Jotai 状态管理
   const [walletState] = useAtom(walletStateAtom);
@@ -51,57 +50,10 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   const [, disconnectWallet] = useAtom(disconnectWalletAtom);
   const [, loadWalletState] = useAtom(loadWalletStateAtom);
 
-  // 本地状态
-  const [isVerifyingSession, setIsVerifyingSession] = useState(false);
-
-  // 验证会话状态
-  const verifySession = useCallback(
-    async (token: string): Promise<boolean> => {
-      try {
-        setIsVerifyingSession(true);
-        console.log('验证钱包会话状态...');
-
-        // 添加超时控制，避免长时间等待
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-
-        const response = await axios
-          .get(`${apiUrl}/auth/session`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal,
-          })
-          .catch(error => {
-            // 如果是网络错误或API不可用，静默失败
-            console.warn('会话验证请求失败，可能是API未启动或网络问题:', error.message);
-            return { data: { isValid: false } };
-          });
-
-        clearTimeout(timeoutId);
-
-        const { isValid, address } = response.data;
-        console.log('会话验证结果:', isValid ? '有效' : '无效', address);
-
-        if (isValid && address) {
-          setWalletAddress(address);
-          return true;
-        }
-
-        return false;
-      } catch (error) {
-        // 静默处理错误
-        console.warn('会话验证过程中出现错误:', error);
-        return false;
-      } finally {
-        setIsVerifyingSession(false);
-      }
-    },
-    [apiUrl]
-  );
-
   // 初始化 - 从 localStorage 恢复钱包状态
   useEffect(() => {
     loadWalletState();
-    
+
     // 如果钱包已连接，通知外部组件
     if (walletState.isConnected && onConnect) {
       onConnect(walletState.address);
@@ -125,76 +77,79 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
   }, []);
 
   // 处理钱包选择
-  const handleSelectWallet = useCallback(async (walletType?: string) => {
-    try {
-      setConnecting(true);
-      setError('');
-      closeModal();
+  const handleSelectWallet = useCallback(
+    async (walletType?: string) => {
+      try {
+        setConnecting(true);
+        setError('');
+        closeModal();
 
-      const result = await connectWallet(walletType);
+        const result = await connectWallet(walletType);
 
-      // 如果用户拒绝连接，静默处理
-      if (result.error?.includes('User rejected') || result.error?.includes('user rejected')) {
-        return;
-      }
-
-      // 处理其他错误
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      // 确保获取签名用于身份验证
-      if (result.provider && result.address) {
-        try {
-          await getWalletSignature(result.address, result.provider);
-        } catch (signError) {
-          console.warn('获取签名失败，这可能会影响需要身份验证的操作', signError);
+        // 如果用户拒绝连接，静默处理
+        if (result.error?.includes('User rejected') || result.error?.includes('user rejected')) {
+          return;
         }
-      }
 
-      // 更新 Jotai 状态
-      connectSuccess({
-        address: result.address,
-        chainId: result.chainId,
-      });
+        // 处理其他错误
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
 
-      // 通知外部组件
-      if (onConnect) {
-        onConnect(result.address);
-      }
+        // 确保获取签名用于身份验证
+        if (result.provider && result.address) {
+          try {
+            await getWalletSignature(result.address, result.provider);
+          } catch (signError) {
+            console.warn('获取签名失败，这可能会影响需要身份验证的操作', signError);
+          }
+        }
 
-      // 触发storage事件，确保其他组件能感知到状态变化
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new StorageEvent('storage', {
-            key: 'walletAuth',
-            newValue: localStorage.getItem('walletAuth'),
-          })
-        );
+        // 更新 Jotai 状态
+        connectSuccess({
+          address: result.address,
+          chainId: result.chainId,
+        });
+
+        // 通知外部组件
+        if (onConnect) {
+          onConnect(result.address);
+        }
+
+        // 触发storage事件，确保其他组件能感知到状态变化
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(
+            new StorageEvent('storage', {
+              key: 'walletAuth',
+              newValue: localStorage.getItem('walletAuth'),
+            })
+          );
+        }
+      } catch (err) {
+        // 检查是否是用户拒绝错误
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.toLowerCase().includes('user rejected')) {
+          setError('连接失败：' + errorMessage);
+        }
+      } finally {
+        setConnecting(false);
       }
-    } catch (err) {
-      // 检查是否是用户拒绝错误
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      if (!errorMessage.toLowerCase().includes('user rejected')) {
-        setError('连接失败：' + errorMessage);
-      }
-    } finally {
-      setConnecting(false);
-    }
-  }, [onConnect, setConnecting, setError, closeModal, connectSuccess]);
+    },
+    [onConnect, setConnecting, setError, closeModal, connectSuccess]
+  );
 
   // 处理断开连接
   const handleDisconnect = useCallback(() => {
     // 调用 web3-utils 钱包断开连接函数
     walletDisconnect();
-    
+
     // 更新 Jotai 状态
     disconnectWallet();
-    
+
     // 清理错误状态
     setError('');
-    
+
     // 通知外部组件
     if (onDisconnect) {
       onDisconnect();
@@ -248,11 +203,11 @@ const WalletConnect: React.FC<WalletConnectProps> = ({
           variant="primary"
           size="sm"
           onClick={openModal}
-          disabled={modalState.isConnecting || isVerifyingSession}
+          disabled={modalState.isConnecting}
           className="flex items-center"
         >
           <WalletIcon className="h-5 w-5 mr-2" />
-          {modalState.isConnecting ? '连接中...' : isVerifyingSession ? '验证中...' : '连接钱包'}
+          {modalState.isConnecting ? '连接中...' : '连接钱包'}
         </Button>
       ) : (
         <div className="flex items-center">
