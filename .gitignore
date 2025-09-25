@@ -56,3 +56,5 @@ pnpm-lock.yaml
 
 # prisma build
 apps/api/src/prisma/
+
+.claude/
