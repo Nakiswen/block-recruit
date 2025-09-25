@@ -26,9 +26,7 @@ interface NavigationProps {
 
 const defaultItems = [
   { name: '首页', href: '/' },
-  { name: '简历筛选', href: '/resume-screening' },
-  { name: '面试官', href: '/interview' },
-  { name: '关于我们', href: '/about' },
+  { name: '岗位列表', href: '/jobs' },
 ];
 
 const Navigation: React.FC<NavigationProps> = ({
