@@ -3,27 +3,24 @@
 import './globals.css';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 // 使用动态导入优化首屏加载性能
-const Navigation = dynamic(
-  () => import('ui').then((mod) => mod.Navigation),
-  { ssr: false, loading: () => <div className="h-16 bg-white shadow-md"></div> }
-);
+const Navigation = dynamic(() => import('ui').then(mod => mod.Navigation), {
+  ssr: false,
+  loading: () => <div className="h-16 bg-white shadow-md"></div>,
+});
 
 const inter = Inter({ subsets: ['latin'] });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [shootingStars, setShootingStars] = useState<Array<{id: number, top: number, left: number, delay: number}>>([]);
-  
+  const [shootingStars, setShootingStars] = useState<
+    Array<{ id: number; top: number; left: number; delay: number }>
+  >([]);
+
   // 钱包连接状态
   const [isConnected, setIsConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
@@ -32,18 +29,18 @@ export default function RootLayout({
   useEffect(() => {
     const stars = [];
     const starCount = 5;
-    
+
     for (let i = 0; i < starCount; i++) {
       stars.push({
         id: i,
         top: Math.random() * 70, // 控制高度分布
         left: 30 + Math.random() * 50, // 控制水平分布
-        delay: Math.random() * 15 // 随机延迟时间
+        delay: Math.random() * 15, // 随机延迟时间
       });
     }
-    
+
     setShootingStars(stars);
-    
+
     // 检查是否已经连接钱包 - 仅从本地存储读取，不发送请求
     if (typeof window !== 'undefined') {
       const savedAddress = localStorage.getItem('walletAuthAddress');
@@ -70,8 +67,8 @@ export default function RootLayout({
 
   return (
     <html lang="zh">
-      <body className={inter.className}>
-        <Navigation 
+      <body className={`${inter.className} min-h-screen`}>
+        <Navigation
           walletConnectEnabled={true}
           onConnect={handleConnect}
           isConnected={isConnected}
@@ -79,7 +76,7 @@ export default function RootLayout({
           onDisconnect={handleDisconnect}
           showMenu={false}
         />
-        <main className="container mx-auto px-4 py-8 min-h-screen">
+        <main className="container mx-auto px-4 pb-24">
           {/* 装饰元素 */}
           <div className="decoration-wrapper">
             {/* 流星效果 */}
@@ -94,12 +91,12 @@ export default function RootLayout({
                 }}
               />
             ))}
-            
+
             {/* 渐变球效果 */}
             <div className="gradient-orb gradient-orb-1"></div>
             <div className="gradient-orb gradient-orb-2"></div>
             <div className="gradient-orb gradient-orb-3"></div>
-            
+
             {/* 几何图形元素 */}
             <div className="geo-shape geo-circle"></div>
             <div className="geo-shape geo-square"></div>
@@ -111,68 +108,42 @@ export default function RootLayout({
               ))}
             </div>
           </div>
-          
+
           <TransitionGroup>
-            <CSSTransition
-              key={pathname}
-              timeout={300}
-              classNames="page-transition"
-              unmountOnExit
-            >
-              <div className="page-wrapper">
-                {children}
-              </div>
+            <CSSTransition key={pathname} timeout={300} classNames="page-transition" unmountOnExit>
+              <div className="page-wrapper">{children}</div>
             </CSSTransition>
           </TransitionGroup>
         </main>
-        <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-12">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              <div>
-                <Link href="/" className="text-xl font-bold mb-4 inline-block">
-                  <span className="gradient-text">BlockRecruit</span>
-                </Link>
-                <p className="text-gray-300 mb-4">
-                  将AI与区块链技术相结合，为Web3人才提供可验证的技能证明与精准岗位匹配
-                </p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <h4 className="text-lg font-bold mb-4"><span className="gradient-text">产品</span></h4>
-                  <ul className="space-y-2">
-                    <li>
-                      <Link href="/resume-screening" className="text-gray-300 hover:text-white transition-colors duration-200">
-                        岗位匹配
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href="/interview" className="text-gray-300 hover:text-white transition-colors duration-200">
-                        技能验证
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href="#" className="text-gray-300 hover:text-white transition-colors duration-200">
-                        链上证明
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold mb-4"><span className="gradient-text">关于我们</span></h4>
-                  <ul className="space-y-2">
-                    <li><Link href="/about" className="text-gray-300 hover:text-white transition-colors duration-200">团队介绍</Link></li>
-                    <li><Link href="/contact" className="text-gray-300 hover:text-white transition-colors duration-200">联系我们</Link></li>
-                  </ul>
-                </div>
-              </div>
+        <footer className="fixed bottom-0 left-0 right-0 z-10 text-xs p-4 bg-background/80 backdrop-blur-sm">
+          <div className="text-center">
+            <div className="text-gray-600 mb-1">
+              &copy; {new Date().getFullYear()} BlockRecruit. 保留所有权利。
             </div>
-            <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
-              <p>&copy; {new Date().getFullYear()} BlockRecruit. 保留所有权利。</p>
+            <div className="text-gray-600">
+              由{' '}
+              <a
+                href="https://openbuild.xyz/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:underline"
+              >
+                OpenBuild
+              </a>{' '}
+              和{' '}
+              <a
+                href="https://youbetdao.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:underline"
+              >
+                YoubetDAO
+              </a>{' '}
+              支持 🪁
             </div>
           </div>
         </footer>
       </body>
     </html>
   );
-} 
+}
