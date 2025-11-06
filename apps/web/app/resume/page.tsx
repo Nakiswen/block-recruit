@@ -1,14 +1,14 @@
 'use client';
 
-import { getAuthHeaders, connectWallet } from '@/packages/web3-utils/wallet';
+import { getAuthHeaders, connectWallet } from 'web3-utils/wallet';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 
 export default function ResumePage() {
   const router = useRouter();
   const [step, setStep] = useState<'select-job' | 'upload-resume'>('select-job');
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [selectedJob, setSelectedJob] = useState<Record<string, unknown> | null>(null);
+  const [jobs, setJobs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fileContent, setFileContent] = useState<string>('');
@@ -147,13 +147,14 @@ export default function ResumePage() {
       setJobs([...jobs, data]);
       setSelectedJob(data);
       setStep('upload-resume');
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 处理401未授权错误
-      if (error.message?.includes('401') || error.message?.includes('请先连接钱包')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage?.includes('401') || errorMessage?.includes('请先连接钱包')) {
         setError('请先连接钱包以创建岗位');
         setIsWalletConnected(false); // 重置连接状态
       } else {
-        setError('创建岗位失败: ' + error.message);
+        setError('创建岗位失败: ' + errorMessage);
       }
       console.error(error);
     } finally {
@@ -197,7 +198,7 @@ export default function ResumePage() {
 
     try {
       const formData = new FormData();
-      formData.append('jobId', selectedJob.id);
+      formData.append('jobId', String(selectedJob?.id || ''));
       formData.append('content', fileContent);
 
       const response = await fetch('/api/resume/analyze', {
@@ -262,7 +263,7 @@ export default function ResumePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               {jobs.map(job => (
                 <div
-                  key={job.id}
+                  key={String(job.id)}
                   className="border p-4 rounded cursor-pointer hover:bg-gray-50"
                   onClick={() => {
                     setSelectedJob(job);
@@ -278,8 +279,8 @@ export default function ResumePage() {
                   role="button"
                   tabIndex={0}
                 >
-                  <h3 className="font-semibold">{job.title}</h3>
-                  <p className="text-sm text-gray-600">{job.jobType}</p>
+                  <h3 className="font-semibold">{String(job.title || '')}</h3>
+                  <p className="text-sm text-gray-600">{String(job.jobType || '')}</p>
                 </div>
               ))}
             </div>
@@ -379,7 +380,7 @@ export default function ResumePage() {
         </div>
       ) : (
         <div>
-          <h2 className="text-xl font-semibold mb-4">上传简历 - {selectedJob?.title}</h2>
+          <h2 className="text-xl font-semibold mb-4">上传简历 - {String(selectedJob?.title)}</h2>
 
           <form onSubmit={handleSubmitResume}>
             <div className="mb-4">

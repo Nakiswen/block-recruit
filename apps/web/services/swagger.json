@@ -94,25 +94,8 @@
           "description": {
             "type": "string"
           },
-          "responsibilities": {
-            "type": "string",
-            "description": "职位职责描述"
-          },
           "requirements": {
-            "type": "string",
-            "description": "职位要求"
-          },
-          "benefits": {
-            "type": "string",
-            "description": "福利待遇"
-          },
-          "companyIntroduction": {
-            "type": "string",
-            "description": "公司介绍"
-          },
-          "companyWebsite": {
-            "type": "string",
-            "description": "公司网站"
+            "type": "string"
           },
           "location": {
             "type": "string"

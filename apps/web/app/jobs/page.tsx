@@ -1,14 +1,24 @@
-"use client";
+'use client';
 
 import { useAtomValue } from 'jotai';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Button } from "ui";
+import { Button } from 'ui';
 
 import { jobServices, applicationServices, userServices, User } from '../../lib/api';
-import { Job } from '../../services/api-client';
+import { Job as BaseJob } from '../../services/api-client';
 import { matchedJobsAtom } from '../../store/matchedJobsAtom';
+
+// 扩展 Job 类型以包含额外字段
+type Job = BaseJob & {
+  similarity?: number;
+  companyName?: string;
+  companyIntroduction?: string;
+  responsibilities?: string;
+  benefits?: string;
+  companyWebsite?: string;
+};
 
 /**
  * 岗位列表页面
@@ -35,7 +45,7 @@ export default function JobsPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        
+
         // 获取当前用户信息
         try {
           const userData = await userServices.getCurrentUser();
@@ -43,24 +53,24 @@ export default function JobsPage() {
         } catch (err) {
           // 静默处理用户信息获取失败
         }
-        
+
         // 优先用Jotai全局store的岗位数据
         if (jotaiJobs && jotaiJobs.length > 0) {
           setJobs(jotaiJobs as Job[]);
           setIsLoading(false);
           return;
         }
-        
+
         // 如果有简历ID，尝试获取匹配的岗位
         const storedResumeId = localStorage.getItem('resumeId');
-        
+
         if (storedResumeId) {
           try {
             const matchedJobs = await jobServices.getJobs();
             setJobs(matchedJobs as Job[]);
           } catch (err) {
             setError('获取岗位数据失败，请稍后重试');
-            
+
             // 获取所有岗位作为备选
             try {
               const allJobs = await jobServices.getJobs();
@@ -80,7 +90,7 @@ export default function JobsPage() {
         setIsLoading(false);
       }
     };
-    
+
     fetchData();
   }, [jotaiJobs]);
 
@@ -88,7 +98,7 @@ export default function JobsPage() {
   const toggleJobExpanded = (jobId: string) => {
     setExpandedState(prev => ({
       ...prev,
-      [jobId]: !prev[jobId]
+      [jobId]: !prev[jobId],
     }));
   };
 
@@ -98,17 +108,17 @@ export default function JobsPage() {
       setError('请先登录后再申请岗位');
       return;
     }
-    
+
     try {
       // 调用API创建投递记录
       await applicationServices.createApplication({
         userId: currentUser.id,
-        jobId: jobId
+        jobId: jobId,
       });
-      
+
       // 设置申请成功状态
       setAppliedJobId(jobId);
-      
+
       // 2秒后清除提示
       setTimeout(() => {
         setAppliedJobId(null);
@@ -132,7 +142,7 @@ export default function JobsPage() {
       {/* 顶部栏 */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">匹配岗位 ({jobs.length})</h2>
-        <Button variant="outline" onClick={() => router.push("/")}>
+        <Button variant="outline" onClick={() => router.push('/')}>
           返回主页
         </Button>
       </div>
@@ -149,23 +159,32 @@ export default function JobsPage() {
         <div className="grid grid-cols-1 gap-6">
           {jobs.map(item => {
             // 处理不同的数据结构，有些接口返回的是嵌套的job对象，有些直接是job对象
-            const job = 'job' in item ? (item.job as Job) : item as Job;
+            const job = 'job' in item ? (item.job as Job) : (item as Job);
             const isExpanded = expandedState[job.id || ''] || false;
             const isApplied = appliedJobId === job.id;
-            
+
             // 计算匹配度百分比，确保数值有效
-            const matchPercentage = job.similarity !== undefined && !isNaN(Number(job.similarity))
-              ? (Number(job.similarity) * 100).toFixed(0)
-              : null;
-            
+            const matchPercentage =
+              job.similarity !== undefined && !isNaN(Number(job.similarity))
+                ? (Number(job.similarity) * 100).toFixed(0)
+                : null;
+
             return (
-              <div key={job.id} className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+              <div
+                key={job.id}
+                className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-grow">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-xl font-semibold">{job.title} <span className="text-blue-600 font-medium ml-2">{job.salary}</span></h3>
+                      <h3 className="text-xl font-semibold">
+                        {job.title}{' '}
+                        <span className="text-blue-600 font-medium ml-2">{job.salary}</span>
+                      </h3>
                     </div>
-                    <p className="text-gray-600">{job.companyName} · {job.location}</p>
+                    <p className="text-gray-600">
+                      {job.companyName} · {job.location}
+                    </p>
                   </div>
                   {matchPercentage && (
                     <div className="bg-purple-100 text-purple-800 font-medium px-3 py-1 rounded-full text-sm ml-4">
@@ -186,17 +205,17 @@ export default function JobsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* 职位描述 */}
                     {job.description && (
                       <div>
-                    <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
+                        <h4 className="font-medium text-gray-900 mb-2">职位描述</h4>
                         <div className="prose text-gray-700">
                           <ReactMarkdown>{job.description}</ReactMarkdown>
                         </div>
                       </div>
                     )}
-                    
+
                     {/* 岗位要求 */}
                     {job.requirements && (
                       <div>
@@ -206,7 +225,7 @@ export default function JobsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* 职责 */}
                     {job.responsibilities && (
                       <div>
@@ -216,7 +235,7 @@ export default function JobsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* 福利待遇 */}
                     {job.benefits && (
                       <div>
@@ -226,13 +245,17 @@ export default function JobsPage() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* 公司网站 */}
                     {job.companyWebsite && (
                       <div>
                         <h4 className="font-medium text-gray-900 mb-2">公司网站</h4>
-                        <a href={job.companyWebsite} target="_blank" rel="noopener noreferrer" 
-                           className="text-blue-600 hover:underline">
+                        <a
+                          href={job.companyWebsite}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:underline"
+                        >
                           {job.companyWebsite}
                         </a>
                       </div>
@@ -245,7 +268,7 @@ export default function JobsPage() {
                     className="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center"
                     onClick={() => toggleJobExpanded(job.id || '')}
                     aria-expanded={isExpanded}
-                    aria-label={isExpanded ? "收起详情" : "查看详情"}
+                    aria-label={isExpanded ? '收起详情' : '查看详情'}
                   >
                     {isExpanded ? '收起详情' : '查看详情'}
                     <svg
@@ -255,22 +278,35 @@ export default function JobsPage() {
                       viewBox="0 0 24 24"
                       xmlns="http://www.w3.org/2000/svg"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
                     </svg>
                   </button>
                   <div className="flex items-center">
                     {isApplied && (
                       <div className="animate-fadeIn mr-4 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
                         </svg>
                         申请成功
                       </div>
                     )}
-                    <Button
-                      onClick={() => handleApplyJob(job.id || '')}
-                      disabled={isApplied}
-                    >
+                    <Button onClick={() => handleApplyJob(job.id || '')} disabled={isApplied}>
                       {isApplied ? '已申请' : '申请并发送证明'}
                     </Button>
                   </div>
@@ -285,16 +321,20 @@ export default function JobsPage() {
         </div>
       )}
 
-      {/* 动画样式 */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-in-out;
-        }
-      `}</style>
+      {/* 动画样式已移至 globals.css */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.3s ease-in-out;
+          }
+        `,
+        }}
+      />
     </div>
   );
-} 
+}
