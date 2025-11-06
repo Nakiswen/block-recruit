@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "target": "es5",
+    "target": "ES2016",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -33,5 +33,5 @@
     ".next/types/**/*.ts",
     "lib/api-config.js"
   ],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "scripts"]
 } 

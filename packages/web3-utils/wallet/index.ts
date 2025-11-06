@@ -1,5 +1,7 @@
 'use client';
 
+/// <reference path="../types/ethereum.d.ts" />
+
 import axios from 'axios';
 import { ethers } from 'ethers';
 
@@ -8,6 +10,17 @@ export interface ConnectWalletResult {
   provider?: ethers.BrowserProvider;
   chainId?: number;
   error?: string;
+}
+
+// 扩展的以太坊提供者类型
+interface ExtendedEthereumProvider {
+  isMetaMask?: boolean;
+  isCoinbaseWallet?: boolean;
+  isWalletConnect?: boolean;
+  on: (event: string, callback: (...args: unknown[]) => void) => void;
+  removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
+  request: (request: { method: string; params?: unknown[] }) => Promise<unknown>;
+  selectedAddress?: string;
 }
 
 // 存储签名
@@ -33,16 +46,16 @@ export async function connectWallet(walletType?: string): Promise<ConnectWalletR
       };
     }
 
-    let ethereum = window.ethereum;
+    let ethereum = window.ethereum as ExtendedEthereumProvider;
 
     // 根据钱包类型选择特定的提供者
-    if (walletType === 'metamask' && window.ethereum?.isMetaMask) {
-      ethereum = window.ethereum;
-    } else if (walletType === 'coinbase' && window.ethereum?.isCoinbaseWallet) {
-      ethereum = window.ethereum;
+    if (walletType === 'metamask' && ethereum?.isMetaMask) {
+      ethereum = window.ethereum as ExtendedEthereumProvider;
+    } else if (walletType === 'coinbase' && ethereum?.isCoinbaseWallet) {
+      ethereum = window.ethereum as ExtendedEthereumProvider;
     } else if (walletType === 'walletconnect') {
       // WalletConnect 通常通过第三方库实现，这里保持通用逻辑
-      ethereum = window.ethereum;
+      ethereum = window.ethereum as ExtendedEthereumProvider;
     }
 
     // 请求用户连接钱包
@@ -286,16 +299,5 @@ export async function isWalletConnected(): Promise<boolean> {
   } catch (error) {
     console.error('检查钱包连接状态失败:', error);
     return false;
-  }
-}
-
-// 添加全局类型声明
-declare global {
-  interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      isCoinbaseWallet?: boolean;
-      [key: string]: unknown;
-    } & Record<string, unknown>;
   }
 }

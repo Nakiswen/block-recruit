@@ -6,7 +6,7 @@ import {
   listenAccountChanges,
   listenChainChanges,
   getWalletSignature,
-} from '@/packages/web3-utils/wallet';
+} from 'web3-utils/wallet';
 import { WalletIcon } from '@heroicons/react/24/outline';
 import { useAtom } from 'jotai';
 import axios from 'axios';
