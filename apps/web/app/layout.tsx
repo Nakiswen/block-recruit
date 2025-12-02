@@ -3,9 +3,8 @@
 import './globals.css';
 import dynamic from 'next/dynamic';
 import { Inter } from 'next/font/google';
-import { usePathname } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import { CSSTransition, TransitionGroup } from 'react-transition-group';
+// import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
 // 使用动态导入优化首屏加载性能
 const Navigation = dynamic(() => import('ui').then(mod => mod.Navigation), {
@@ -16,7 +15,6 @@ const Navigation = dynamic(() => import('ui').then(mod => mod.Navigation), {
 const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const [shootingStars, setShootingStars] = useState<
     Array<{ id: number; top: number; left: number; delay: number }>
   >([]);
@@ -109,11 +107,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
 
-          <TransitionGroup>
-            <CSSTransition key={pathname} timeout={300} classNames="page-transition" unmountOnExit>
-              <div className="page-wrapper">{children}</div>
-            </CSSTransition>
-          </TransitionGroup>
+          {/* <TransitionGroup> */}
+          {/* <CSSTransition key={pathname} timeout={300} classNames="page-transition" unmountOnExit> */}
+          <div className="page-wrapper">{children}</div>
+          {/* </CSSTransition>
+          </TransitionGroup> */}
         </main>
         <footer className="fixed bottom-0 left-0 right-0 z-10 text-xs p-4 bg-background/80 backdrop-blur-sm">
           <div className="text-center">
