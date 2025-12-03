@@ -45,6 +45,13 @@ export default function Home() {
 
   const router = useRouter();
 
+  function getRandomSlice<T>(arr: T[]): T[] {
+    const randomNum = Math.floor(Math.random() * 10) + 1;
+    const endIndex = Math.min(randomNum, arr.length);
+
+    return arr.slice(0, endIndex);
+  }
+
   // 轮询后端进度接口，混合进度条方案
   useEffect(() => {
     if (resumeUploaded && matchingStarted && resumeId) {
@@ -86,7 +93,7 @@ export default function Home() {
 
             // 获取岗位数据
             if (jobs && Array.isArray(jobs) && jobs.length > 0) {
-              setMatchedJobsAtom(jobs); // 存到全局
+              setMatchedJobsAtom(getRandomSlice(jobs)); // 存到全局
               setCurrentResumeId(resumeId); // 保存简历ID到全局
             } else {
               // 兜底再拉一次岗位
@@ -96,7 +103,7 @@ export default function Home() {
                   if (matchedJobsData && matchedJobsData.length > 0) {
                     progressManager.complete(100);
                     setIsLoading(false);
-                    setMatchedJobsAtom(matchedJobsData);
+                    setMatchedJobsAtom(getRandomSlice(matchedJobsData));
                     setCurrentResumeId(resumeId);
                   }
                   fallbackCountRef.current += 1;
@@ -120,7 +127,7 @@ export default function Home() {
               if (matchedJobsData && matchedJobsData.length > 0) {
                 progressManager.complete(100);
                 setIsLoading(false);
-                setMatchedJobsAtom(matchedJobsData);
+                setMatchedJobsAtom(getRandomSlice(matchedJobsData));
                 setCurrentResumeId(resumeId);
               }
               fallbackCountRef.current += 1;
