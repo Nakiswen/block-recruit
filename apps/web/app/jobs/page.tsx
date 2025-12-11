@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from 'ui';
 
-import { jobServices, applicationServices, userServices, User } from '../../lib/api';
+import { jobServices, userServices } from '../../lib/api';
 import { Job as BaseJob } from '../../services/api-client';
 import { matchedJobsAtom } from '../../store/matchedJobsAtom';
 
@@ -28,12 +28,12 @@ export default function JobsPage() {
   // 展开状态，记录每个岗位是否展开
   const [expandedState, setExpandedState] = useState<Record<string, boolean>>({});
   // 记录已申请的岗位ID
-  const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
+  // const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
   // 岗位数据
   const jotaiJobs = useAtomValue(matchedJobsAtom);
   const [jobs, setJobs] = useState<Job[]>([]);
   // 当前用户
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // const [currentUser, setCurrentUser] = useState<User | null>(null);
   // 加载状态
   const [isLoading, setIsLoading] = useState(true);
   // 错误信息
@@ -48,8 +48,9 @@ export default function JobsPage() {
 
         // 获取当前用户信息
         try {
-          const userData = await userServices.getCurrentUser();
-          setCurrentUser(userData);
+          // const userData =
+          await userServices.getCurrentUser();
+          // setCurrentUser(userData);
         } catch (err) {
           // 静默处理用户信息获取失败
         }
@@ -102,31 +103,31 @@ export default function JobsPage() {
     }));
   };
 
-  // 处理岗位申请
-  const handleApplyJob = async (jobId: string) => {
-    if (!currentUser || !currentUser.id) {
-      setError('请先登录后再申请岗位');
-      return;
-    }
+  // // 处理岗位申请
+  // const handleApplyJob = async (jobId: string) => {
+  //   if (!currentUser || !currentUser.id) {
+  //     setError('请先登录后再申请岗位');
+  //     return;
+  //   }
 
-    try {
-      // 调用API创建投递记录
-      await applicationServices.createApplication({
-        userId: currentUser.id,
-        jobId: jobId,
-      });
+  //   try {
+  //     // 调用API创建投递记录
+  //     await applicationServices.createApplication({
+  //       userId: currentUser.id,
+  //       jobId: jobId,
+  //     });
 
-      // 设置申请成功状态
-      setAppliedJobId(jobId);
+  //     // 设置申请成功状态
+  //     setAppliedJobId(jobId);
 
-      // 2秒后清除提示
-      setTimeout(() => {
-        setAppliedJobId(null);
-      }, 3000);
-    } catch (err) {
-      setError('岗位申请失败，请重试');
-    }
-  };
+  //     // 2秒后清除提示
+  //     setTimeout(() => {
+  //       setAppliedJobId(null);
+  //     }, 3000);
+  //   } catch (err) {
+  //     setError('岗位申请失败，请重试');
+  //   }
+  // };
 
   // 加载中状态
   if (isLoading) {
@@ -161,7 +162,7 @@ export default function JobsPage() {
             // 处理不同的数据结构，有些接口返回的是嵌套的job对象，有些直接是job对象
             const job = 'job' in item ? (item.job as Job) : (item as Job);
             const isExpanded = expandedState[job.id || ''] || false;
-            const isApplied = appliedJobId === job.id;
+            // const isApplied = appliedJobId === job.id;
 
             // 计算匹配度百分比，确保数值有效
             const matchPercentage =
@@ -286,7 +287,7 @@ export default function JobsPage() {
                       ></path>
                     </svg>
                   </button>
-                  <div className="flex items-center">
+                  {/* <div className="flex items-center">
                     {isApplied && (
                       <div className="animate-fadeIn mr-4 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center">
                         <svg
@@ -309,7 +310,7 @@ export default function JobsPage() {
                     <Button onClick={() => handleApplyJob(job.id || '')} disabled={isApplied}>
                       {isApplied ? '已申请' : '申请并发送证明'}
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             );
