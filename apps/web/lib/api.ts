@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from 'axios';
 
 // 确定是否使用代理
@@ -6,9 +7,7 @@ const shouldUseProxy = process.env.NODE_ENV === 'development';
 // 创建axios实例，配置基础URL
 const api = axios.create({
   // 如果是开发环境，使用代理路径；否则使用环境变量中的API URL
-  baseURL: shouldUseProxy 
-    ? '/api' 
-    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  baseURL: shouldUseProxy ? '/api' : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -17,7 +16,7 @@ const api = axios.create({
 
 // 请求拦截器，用于添加认证令牌
 api.interceptors.request.use(
-  (config) => {
+  config => {
     // 在浏览器环境中获取token
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (token) {
@@ -25,7 +24,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
+  error => {
     return Promise.reject(error);
   }
 );
@@ -94,10 +93,50 @@ export const authServices = {
   },
 };
 
+// 岗位上传请求类型
+export interface CreateJobRequest {
+  positionName: string;
+  company: string;
+  description?: string;
+  responsibilities?: string;
+  requirements?: string;
+  benefits?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  location?: string;
+  workTypeName?: string;
+  officeModeName?: string;
+  leverName?: string;
+  companyIntroduction?: string;
+  companyWebsite?: string;
+  companyLogo?: string;
+  companySizeName?: string;
+  email?: string;
+  phone?: string;
+  wechat?: string;
+  telegram?: string;
+  tags?: string[];
+}
+
+// 岗位上传响应类型
+export interface UploadJobResponse {
+  code: number;
+  message: string;
+  data: {
+    jobId: string;
+    vectorized: boolean;
+  };
+}
+
 // 岗位相关
 export const jobServices = {
   getJobs: async (params?: { page?: number; pageSize?: number }): Promise<Job[]> => {
     const response = await api.get<Job[]>('/jobs', { params });
+    return response.data;
+  },
+
+  uploadJob: async (jobData: CreateJobRequest): Promise<UploadJobResponse> => {
+    const response = await api.post<UploadJobResponse>('/jobs/upload', jobData);
     return response.data;
   },
 };
@@ -107,7 +146,7 @@ export const resumeServices = {
   uploadResume: async (file: File): Promise<any> => {
     const formData = new FormData();
     formData.append('resume', file);
-    
+
     const response = await api.post('/resumes/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -121,13 +160,16 @@ export const resumeServices = {
     return response.data;
   },
 
-  getMatchingJobs: async (resumeId: string, params?: {
-    minMatchScore?: number;
-    location?: string;
-    industry?: string; 
-    educationLevel?: string;
-    experienceYears?: number;
-  }): Promise<Job[]> => {
+  getMatchingJobs: async (
+    resumeId: string,
+    params?: {
+      minMatchScore?: number;
+      location?: string;
+      industry?: string;
+      educationLevel?: string;
+      experienceYears?: number;
+    }
+  ): Promise<Job[]> => {
     const response = await api.get<Job[]>(`/resumes/${resumeId}/matching-jobs`, { params });
     return response.data;
   },
@@ -166,9 +208,13 @@ export const nftServices = {
     return response.data;
   },
 
-  recordNftAchievement: async (data: { userId: string; type: string; data: string }): Promise<any> => {
+  recordNftAchievement: async (data: {
+    userId: string;
+    type: string;
+    data: string;
+  }): Promise<any> => {
     const response = await api.post('/nft/achievement', data);
     return response.data;
   },
 };
-export default api; 
+export default api;
