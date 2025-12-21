@@ -5,13 +5,15 @@ import {
   RiseOutlined,
   EnvironmentOutlined,
   DollarOutlined,
-  ClockCircleOutlined,
   FileTextOutlined,
   TeamOutlined,
   ThunderboltOutlined,
   BankOutlined,
   MailOutlined,
+  PhoneOutlined,
+  GlobalOutlined,
 } from '@ant-design/icons';
+import { jobServices } from '../../lib/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -20,12 +22,42 @@ export default function RecruitPage() {
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
-  const onFinish = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onFinish = async (values: any) => {
     try {
-      messageApi.success('招聘信息发布成功！');
-      form.resetFields();
-    } catch (error) {
-      messageApi.error('发布失败，请重试');
+      // 构建接口所需的数据结构
+      const apiData = {
+        positionName: values.positionName,
+        company: values.company,
+        description: values.description || '',
+        responsibilities: values.responsibilities || '',
+        requirements: values.requirements || '',
+        benefits: values.benefits || '',
+        minSalary: values.minSalary ? Number(values.minSalary) : undefined,
+        maxSalary: values.maxSalary ? Number(values.maxSalary) : undefined,
+        location: values.location || '',
+        workTypeName: values.workTypeName || '',
+        officeModeName: values.officeModeName || '',
+        leverName: values.leverName || '',
+        companyIntroduction: values.companyIntroduction || '',
+        companyWebsite: values.companyWebsite || '',
+        email: values.email || '',
+        phone: values.phone || '',
+        tags: values.tags || [],
+      };
+
+      // 调用uploadJob接口
+      const response = await jobServices.uploadJob(apiData);
+
+      if (response.code === 200 || response.code === 0) {
+        messageApi.success('招聘信息发布成功！');
+        form.resetFields();
+      } else {
+        messageApi.error('发布失败');
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      messageApi.error(error.response?.data?.message || error.message || '发布失败，请重试');
     }
   };
 
@@ -59,6 +91,7 @@ export default function RecruitPage() {
             requiredMark="optional"
             className="p-8"
           >
+            {/* 基本信息 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-primary/20">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -67,13 +100,23 @@ export default function RecruitPage() {
                 <h2 className="text-2xl font-bold text-foreground">基本信息</h2>
               </div>
 
-              <Form.Item
-                label={<span className="text-base font-semibold">职位名称</span>}
-                name="jobTitle"
-                rules={[{ required: true, message: '请输入职位名称' }]}
-              >
-                <Input size="large" placeholder="如：高级前端工程师" className="rounded-lg" />
-              </Form.Item>
+              <div className="grid md:grid-cols-2 gap-6">
+                <Form.Item
+                  label={<span className="text-base font-semibold">职位名称</span>}
+                  name="positionName"
+                  rules={[{ required: true, message: '请输入职位名称' }]}
+                >
+                  <Input size="large" placeholder="如：高级前端工程师" className="rounded-lg" />
+                </Form.Item>
+
+                <Form.Item
+                  label={<span className="text-base font-semibold">公司名称</span>}
+                  name="company"
+                  rules={[{ required: true, message: '请输入公司名称' }]}
+                >
+                  <Input size="large" placeholder="请输入公司全称" className="rounded-lg" />
+                </Form.Item>
+              </div>
             </div>
 
             {/* 工作信息 */}
@@ -94,47 +137,46 @@ export default function RecruitPage() {
                   name="location"
                   rules={[{ required: true, message: '请输入工作地点' }]}
                 >
-                  <Input size="large" placeholder="如：北京/上海/远程" className="rounded-lg" />
+                  <Input size="large" placeholder="如：北京、上海、远程" className="rounded-lg" />
                 </Form.Item>
 
                 <Form.Item
                   label={<span className="text-base font-semibold">工作类型</span>}
-                  name="jobType"
+                  name="workTypeName"
                   rules={[{ required: true, message: '请选择工作类型' }]}
                 >
                   <Select size="large" placeholder="选择类型" className="rounded-lg">
-                    <Option value="fulltime">全职</Option>
-                    <Option value="parttime">兼职</Option>
-                    <Option value="intern">实习</Option>
+                    <Option value="全职">全职</Option>
+                    <Option value="兼职">兼职</Option>
+                    <Option value="实习">实习</Option>
+                    <Option value="合同">合同</Option>
                   </Select>
                 </Form.Item>
 
                 <Form.Item
-                  label={<span className="text-base font-semibold">经验要求</span>}
-                  name="experience"
-                  rules={[{ required: true, message: '请选择经验要求' }]}
+                  label={<span className="text-base font-semibold">办公模式</span>}
+                  name="officeModeName"
+                  rules={[{ required: true, message: '请选择办公模式' }]}
                 >
-                  <Select size="large" placeholder="选择经验要求" className="rounded-lg">
-                    <Option value="fresh">应届生</Option>
-                    <Option value="1-3">1-3年</Option>
-                    <Option value="3-5">3-5年</Option>
-                    <Option value="5+">5年以上</Option>
-                    <Option value="unlimited">不限</Option>
+                  <Select size="large" placeholder="选择办公模式" className="rounded-lg">
+                    <Option value="办公室">办公室</Option>
+                    <Option value="远程">远程</Option>
+                    <Option value="混合">混合</Option>
+                    <Option value="灵活">灵活</Option>
                   </Select>
                 </Form.Item>
 
                 <Form.Item
-                  label={<span className="text-base font-semibold">学历要求</span>}
-                  name="education"
-                  rules={[{ required: true, message: '请选择学历要求' }]}
+                  label={<span className="text-base font-semibold">级别</span>}
+                  name="leverName"
+                  rules={[{ required: true, message: '请选择级别' }]}
                 >
-                  <Select size="large" placeholder="选择学历要求" className="rounded-lg">
-                    <Option value="highschool">高中</Option>
-                    <Option value="college">大专</Option>
-                    <Option value="bachelor">本科</Option>
-                    <Option value="master">硕士</Option>
-                    <Option value="phd">博士</Option>
-                    <Option value="unlimited">不限</Option>
+                  <Select size="large" placeholder="选择级别" className="rounded-lg">
+                    <Option value="初级">初级</Option>
+                    <Option value="中级">中级</Option>
+                    <Option value="高级">高级</Option>
+                    <Option value="专家">专家</Option>
+                    <Option value="管理">管理</Option>
                   </Select>
                 </Form.Item>
               </div>
@@ -151,7 +193,7 @@ export default function RecruitPage() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <Form.Item
-                  label={<span className="text-base font-semibold">薪资范围（月薪/千元）</span>}
+                  label={<span className="text-base font-semibold">薪资范围（月薪/元）</span>}
                 >
                   <div className="flex items-center gap-2">
                     <Form.Item
@@ -183,41 +225,15 @@ export default function RecruitPage() {
                     </Form.Item>
                   </div>
                 </Form.Item>
+
                 <Form.Item
-                  label={<span className="text-base font-semibold">是否面议</span>}
-                  name="salaryNegotiable"
-                  rules={[{ required: true, message: '请选择是否面议' }]}
+                  label={<span className="text-base font-semibold">福利待遇</span>}
+                  name="benefits"
+                  rules={[{ required: true, message: '请输入福利待遇' }]}
                 >
-                  <Select size="large" placeholder="选择" className="rounded-lg">
-                    <Option value="yes">是</Option>
-                    <Option value="no">否</Option>
-                  </Select>
+                  <TextArea rows={2} placeholder="请描述公司的福利待遇..." className="rounded-lg" />
                 </Form.Item>
               </div>
-
-              <Form.Item
-                label={<span className="text-base font-semibold">福利待遇</span>}
-                name="benefits"
-              >
-                <Select
-                  mode="multiple"
-                  size="large"
-                  placeholder="选择福利（可多选）"
-                  className="rounded-lg"
-                  options={[
-                    { label: '五险一金', value: 'insurance' },
-                    { label: '年终奖', value: 'bonus' },
-                    { label: '股权期权', value: 'equity' },
-                    { label: '弹性工作', value: 'flexible' },
-                    { label: '带薪年假', value: 'vacation' },
-                    { label: '团队建设', value: 'teambuilding' },
-                    { label: '培训学习', value: 'training' },
-                    { label: '免费午餐', value: 'meals' },
-                    { label: '健身房', value: 'gym' },
-                    { label: '通勤补助', value: 'transport' },
-                  ]}
-                />
-              </Form.Item>
             </div>
 
             {/* 职位描述 */}
@@ -233,6 +249,20 @@ export default function RecruitPage() {
                 label={<span className="text-base font-semibold">职位描述</span>}
                 name="description"
                 rules={[{ required: true, message: '请输入职位描述' }]}
+              >
+                <TextArea
+                  rows={4}
+                  placeholder="请简要描述职位..."
+                  showCount
+                  maxLength={500}
+                  className="rounded-lg"
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={<span className="text-base font-semibold">工作职责</span>}
+                name="responsibilities"
+                rules={[{ required: true, message: '请输入工作职责' }]}
               >
                 <TextArea
                   rows={6}
@@ -259,7 +289,7 @@ export default function RecruitPage() {
 
               <Form.Item
                 label={<span className="text-base font-semibold">技能标签</span>}
-                name="skills"
+                name="tags"
               >
                 <Select
                   mode="tags"
@@ -271,7 +301,7 @@ export default function RecruitPage() {
               </Form.Item>
             </div>
 
-            {/* ============ 新增：公司信息 ============ */}
+            {/* 公司信息 */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-primary/20">
                 <div className="p-2 bg-primary/10 rounded-lg">
@@ -280,10 +310,9 @@ export default function RecruitPage() {
                 <h2 className="text-2xl font-bold text-foreground">公司信息</h2>
               </div>
 
-              {/* 公司介绍 */}
               <Form.Item
                 label={<span className="text-base font-semibold">公司介绍</span>}
-                name="companyDescription"
+                name="companyIntroduction"
                 rules={[{ required: true, message: '请输入公司介绍' }]}
               >
                 <TextArea
@@ -294,66 +323,63 @@ export default function RecruitPage() {
                   className="rounded-lg"
                 />
               </Form.Item>
-            </div>
-            {/* 其他信息 */}
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-6 pb-3 border-b-2 border-primary/20">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <ClockCircleOutlined
-                    className="h-5 w-5 text-primary"
-                    style={{ fontSize: '20px' }}
-                  />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground">投递信息</h2>
-              </div>
 
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
+              <div className="grid md:grid-cols-2 gap-6">
                 <Form.Item
-                  label={<span className="text-base font-semibold">联系方式</span>}
-                  name="contact"
-                  rules={[{ required: true, message: '请输入联系方式' }]}
+                  label={<span className="text-base font-semibold">公司官网</span>}
+                  name="companyWebsite"
                 >
                   <Input
                     size="large"
-                    placeholder="邮箱/tg/电话"
+                    placeholder="https://www.example.com"
+                    className="rounded-lg"
+                    prefix={<GlobalOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={<span className="text-base font-semibold">邮箱</span>}
+                  name="email"
+                  rules={[
+                    { required: true, message: '请输入邮箱' },
+                    { type: 'email', message: '请输入正确的邮箱格式' },
+                  ]}
+                >
+                  <Input
+                    size="large"
+                    placeholder="接收简历的邮箱"
                     className="rounded-lg"
                     prefix={<MailOutlined className="text-gray-400" />}
                   />
                 </Form.Item>
+
+                <Form.Item
+                  label={<span className="text-base font-semibold">电话</span>}
+                  name="phone"
+                >
+                  <Input
+                    size="large"
+                    placeholder="联系电话"
+                    className="rounded-lg"
+                    prefix={<PhoneOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
+
+                <Form.Item
+                  label={<span className="text-base font-semibold">投递说明</span>}
+                  name="applicationInstructions"
+                  extra="选填：请说明简历投递方式、格式要求等"
+                >
+                  <TextArea
+                    rows={2}
+                    placeholder="请说明投递方式和注意事项..."
+                    className="rounded-lg"
+                  />
+                </Form.Item>
               </div>
-
-              <Form.Item
-                label={<span className="text-base font-semibold">投递说明</span>}
-                name="applicationInstructions"
-                extra="请说明简历投递方式、格式要求、筛选流程等信息"
-              >
-                <TextArea
-                  rows={4}
-                  placeholder="请详细说明投递方式，例如：
-1. 简历请发送至上述邮箱，标题格式：职位+姓名+工作经验
-2. 附件请使用PDF格式，大小不超过10MB
-3. 初筛通过后，我们将在3个工作日内联系
-4. 面试流程：HR初筛→技术面试→HR终面→录用通知"
-                  maxLength={1000}
-                  showCount
-                  className="rounded-lg"
-                />
-              </Form.Item>
-
-              <Form.Item
-                label={<span className="text-base font-semibold">备注说明</span>}
-                name="notes"
-              >
-                <TextArea
-                  rows={3}
-                  placeholder="其他补充说明（选填）"
-                  maxLength={500}
-                  showCount
-                  className="rounded-lg"
-                />
-              </Form.Item>
             </div>
 
+            {/* 提交按钮 */}
             <Form.Item className="mb-0">
               <div className="flex gap-4 pt-4">
                 <Button
