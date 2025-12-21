@@ -26,4 +26,41 @@ export async function getJobList(skip: number, take: number): Promise<job_postin
     take,
   });
   return jobs;
-} 
+}
+
+/**
+ * 创建岗位
+ * @param data 岗位数据
+ * @returns 创建的岗位对象
+ */
+export async function createJobPosting(data: {
+  topic_id: string;
+  position_name: string;
+  company: string;
+  content?: string;
+  content2?: string;
+  content3?: string;
+  content5?: string;
+  min_salary?: number;
+  max_salary?: number;
+  location?: string;
+  work_type_name?: string;
+  office_mode_name?: string;
+  lever_name?: string;
+  company_introduction?: string;
+  company_website?: string;
+  company_logo?: string;
+  company_size_name?: string;
+  email?: string;
+  phone?: string;
+  wechat?: string;
+  telegram?: string;
+  create_time: bigint;
+  ffrom: string;
+  status: number;
+}): Promise<job_posting> {
+  const job = await prisma.job_posting.create({
+    data,
+  });
+  return job;
+}
