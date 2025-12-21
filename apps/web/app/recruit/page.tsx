@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Form, Input, Select, Button, InputNumber, message, Card } from 'antd';
 import {
   RiseOutlined,
@@ -21,9 +22,11 @@ const { Option } = Select;
 export default function RecruitPage() {
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onFinish = async (values: any) => {
+    setIsSubmitting(true);
     try {
       // 构建接口所需的数据结构
       const apiData = {
@@ -58,6 +61,8 @@ export default function RecruitPage() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       messageApi.error(error.response?.data?.message || error.message || '发布失败，请重试');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -135,7 +140,6 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">工作地点</span>}
                   name="location"
-                  rules={[{ required: true, message: '请输入工作地点' }]}
                 >
                   <Input size="large" placeholder="如：北京、上海、远程" className="rounded-lg" />
                 </Form.Item>
@@ -143,7 +147,6 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">工作类型</span>}
                   name="workTypeName"
-                  rules={[{ required: true, message: '请选择工作类型' }]}
                 >
                   <Select size="large" placeholder="选择类型" className="rounded-lg">
                     <Option value="全职">全职</Option>
@@ -156,7 +159,6 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">办公模式</span>}
                   name="officeModeName"
-                  rules={[{ required: true, message: '请选择办公模式' }]}
                 >
                   <Select size="large" placeholder="选择办公模式" className="rounded-lg">
                     <Option value="办公室">办公室</Option>
@@ -169,7 +171,6 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">级别</span>}
                   name="leverName"
-                  rules={[{ required: true, message: '请选择级别' }]}
                 >
                   <Select size="large" placeholder="选择级别" className="rounded-lg">
                     <Option value="初级">初级</Option>
@@ -196,11 +197,7 @@ export default function RecruitPage() {
                   label={<span className="text-base font-semibold">薪资范围（月薪/元）</span>}
                 >
                   <div className="flex items-center gap-2">
-                    <Form.Item
-                      name="minSalary"
-                      rules={[{ required: true, message: '请输入最低薪资' }]}
-                      className="mb-0 flex-1"
-                    >
+                    <Form.Item name="minSalary" className="mb-0 flex-1">
                       <InputNumber
                         size="large"
                         min={0}
@@ -211,11 +208,7 @@ export default function RecruitPage() {
 
                     <div className="px-3 text-gray-400">~</div>
 
-                    <Form.Item
-                      name="maxSalary"
-                      rules={[{ required: true, message: '请输入最高薪资' }]}
-                      className="mb-0 flex-1"
-                    >
+                    <Form.Item name="maxSalary" className="mb-0 flex-1">
                       <InputNumber
                         size="large"
                         min={0}
@@ -229,7 +222,6 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">福利待遇</span>}
                   name="benefits"
-                  rules={[{ required: true, message: '请输入福利待遇' }]}
                 >
                   <TextArea rows={2} placeholder="请描述公司的福利待遇..." className="rounded-lg" />
                 </Form.Item>
@@ -248,7 +240,6 @@ export default function RecruitPage() {
               <Form.Item
                 label={<span className="text-base font-semibold">职位描述</span>}
                 name="description"
-                rules={[{ required: true, message: '请输入职位描述' }]}
               >
                 <TextArea
                   rows={4}
@@ -262,7 +253,6 @@ export default function RecruitPage() {
               <Form.Item
                 label={<span className="text-base font-semibold">工作职责</span>}
                 name="responsibilities"
-                rules={[{ required: true, message: '请输入工作职责' }]}
               >
                 <TextArea
                   rows={6}
@@ -276,7 +266,6 @@ export default function RecruitPage() {
               <Form.Item
                 label={<span className="text-base font-semibold">任职要求</span>}
                 name="requirements"
-                rules={[{ required: true, message: '请输入任职要求' }]}
               >
                 <TextArea
                   rows={6}
@@ -313,7 +302,6 @@ export default function RecruitPage() {
               <Form.Item
                 label={<span className="text-base font-semibold">公司介绍</span>}
                 name="companyIntroduction"
-                rules={[{ required: true, message: '请输入公司介绍' }]}
               >
                 <TextArea
                   rows={5}
@@ -340,10 +328,7 @@ export default function RecruitPage() {
                 <Form.Item
                   label={<span className="text-base font-semibold">邮箱</span>}
                   name="email"
-                  rules={[
-                    { required: true, message: '请输入邮箱' },
-                    { type: 'email', message: '请输入正确的邮箱格式' },
-                  ]}
+                  rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
                 >
                   <Input
                     size="large"
@@ -386,14 +371,17 @@ export default function RecruitPage() {
                   type="primary"
                   htmlType="submit"
                   size="large"
+                  loading={isSubmitting}
+                  disabled={isSubmitting}
                   className="flex-1 h-12 rounded-xl font-semibold text-base shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
-                  icon={<ThunderboltOutlined />}
+                  icon={!isSubmitting && <ThunderboltOutlined />}
                 >
-                  立即发布
+                  {isSubmitting ? '发布中...' : '立即发布'}
                 </Button>
                 <Button
                   size="large"
                   onClick={() => form.resetFields()}
+                  disabled={isSubmitting}
                   className="px-8 h-12 rounded-xl font-semibold text-base"
                 >
                   重置表单
