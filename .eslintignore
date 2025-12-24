@@ -14,7 +14,6 @@ node_modules/
 public/
 
 # 下一代配置
-next.config.js
 next-env.d.ts
 
 # 测试配置和覆盖率报告
@@ -22,7 +21,6 @@ jest.config.js
 coverage/
 
 # 其他配置文件
-*.config.js
 .eslintrc.js
 
 # 缓存

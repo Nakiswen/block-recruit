@@ -26,7 +26,7 @@ export default function ResumeAnalysisPage() {
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const response = await fetch(`/api/resume/${id}`);
+        const response = await fetch(`/api/business/resume/${id}`);
         const { data } = await response.json();
         setAnalysis(data);
       } catch (error) {

@@ -12,12 +12,14 @@ datasource db {
   url      = env("WEB3CV_DATABASE_URL")
 }
 
-/// 用户表，记录所有注册用户的钱包地址及基础信息
+/// 用户表，记录所有注册用户的钱包地址及基础信息（支持钱包登录和Google OAuth登录）
 model User {
   id        String   @id @default(cuid())
-  address   String   @unique                 // 钱包地址，唯一
+  address   String?  @unique                 // 钱包地址，可选（钱包登录用户）
   nickname  String?                         // 用户昵称
-  email     String?                         // 邮箱（可选）
+  email     String?  @unique                 // 邮箱（Google登录必填）
+  googleId  String?  @unique                 // Google账号ID（Google登录用户）
+  avatar    String?                         // 用户头像URL
   createdAt DateTime @default(now())        // 注册时间
   updatedAt DateTime @updatedAt             // 更新时间
   applications Application[]                // 用户的投递记录

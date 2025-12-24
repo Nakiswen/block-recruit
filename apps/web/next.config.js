@@ -28,11 +28,11 @@ const nextConfig = {
   },
   // 添加API代理配置，解决本地开发环境的跨域问题
   async rewrites() {
-    console.log('设置API代理: /api/* => http://localhost:3001/*');
+    console.log('设置API代理: /api/business/* => http://localhost:3001/*');
     return [
       {
-        source: '/api/:path*',
-        destination: 'http://localhost:3001/:path*', // 代理到后端API服务
+        source: '/api/business/:path*',
+        destination: 'http://localhost:3001/:path*', // 代理到后端API服务 (排除 NextAuth 路由)
       },
     ];
   },
