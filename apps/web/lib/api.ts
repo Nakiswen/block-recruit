@@ -7,7 +7,9 @@ const shouldUseProxy = process.env.NODE_ENV === 'development';
 // 创建axios实例，配置基础URL
 const api = axios.create({
   // 如果是开发环境，使用代理路径；否则使用环境变量中的API URL
-  baseURL: shouldUseProxy ? '/api' : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  baseURL: shouldUseProxy
+    ? '/api/business'
+    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

@@ -25,12 +25,28 @@ module.exports = {
       },
     },
     {
+      files: ['next.config.js'],
+      parserOptions: {
+        project: null,
+      },
+      rules: {
+        '@typescript-eslint/no-var-requires': 'off',
+        'no-console': 'off',
+      },
+    },
+    {
       files: ['scripts/**/*.js'],
       parserOptions: {
         project: null,
       },
       rules: {
         '@typescript-eslint/no-var-requires': 'off',
+        'no-console': 'off',
+      },
+    },
+    {
+      files: ['services/api-request.ts'],
+      rules: {
         'no-console': 'off',
       },
     },

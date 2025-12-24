@@ -69,7 +69,7 @@ export default function ResumePage() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/job');
+      const response = await fetch('/api/business/job');
       const { success, data, error } = await response.json();
 
       if (!success) {
@@ -121,7 +121,7 @@ export default function ResumePage() {
         return;
       }
 
-      const response = await fetch('/api/job', {
+      const response = await fetch('/api/business/job', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,7 +201,7 @@ export default function ResumePage() {
       formData.append('jobId', String(selectedJob?.id || ''));
       formData.append('content', fileContent);
 
-      const response = await fetch('/api/resume/analyze', {
+      const response = await fetch('/api/business/resume/analyze', {
         method: 'POST',
         body: formData,
       });
