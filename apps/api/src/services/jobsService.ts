@@ -8,21 +8,22 @@ import { validateCreateJobDTO } from '@/types/job.dto';
  * 获取岗位列表 Service
  * @param page 页码
  * @param pageSize 每页数量
- * @returns 岗位列表和缓存标记
+ * @returns 岗位列表、总数和缓存标记
  */
 export async function getJobList(
   page: number,
   pageSize: number
-): Promise<{ jobs: any[]; cache: boolean }> {
+): Promise<{ jobs: any[]; total: number; cache: boolean }> {
   const skip = (page - 1) * pageSize;
   const cacheKey = `job_list_${page}_${pageSize}`;
   // 优先查缓存
   const cacheData = await redis.get(cacheKey);
   if (cacheData) {
-    return { jobs: JSON.parse(cacheData), cache: true };
+    const cachedResult = JSON.parse(cacheData);
+    return { ...cachedResult, cache: true };
   }
   // 查询数据库
-  const jobsData = await jobsModel.getJobList(skip, pageSize);
+  const { jobs: jobsData, total } = await jobsModel.getJobList(skip, pageSize);
 
   // 将数据库字段映射为前端需要的格式
   const jobs = jobsData.map(job => ({
@@ -49,8 +50,9 @@ export async function getJobList(
       : new Date().toISOString(),
   }));
 
-  await redis.set(cacheKey, JSON.stringify(jobs), 'EX', 60); // 缓存60秒
-  return { jobs, cache: false };
+  const result = { jobs, total };
+  await redis.set(cacheKey, JSON.stringify(result), 'EX', 60); // 缓存60秒
+  return { ...result, cache: false };
 }
 
 /**
