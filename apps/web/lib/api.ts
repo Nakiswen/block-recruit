@@ -132,9 +132,24 @@ export interface UploadJobResponse {
 
 // 岗位相关
 export const jobServices = {
-  getJobs: async (params?: { page?: number; pageSize?: number }): Promise<Job[]> => {
-    const response = await api.get<Job[]>('/jobs', { params });
-    return response.data;
+  getJobs: async (params?: {
+    page?: number;
+    pageSize?: number;
+  }): Promise<{
+    jobs: Job[];
+    total: number;
+  }> => {
+    const response = await api.get<{
+      code: number;
+      data: {
+        jobs: Job[];
+        total: number;
+      };
+      cache: boolean;
+    }>('/jobs', { params });
+
+    // 后端返回的是 { code: 0, data: jobs, cache } 格式，需要解包 data 字段
+    return response.data.data;
   },
 
   uploadJob: async (jobData: CreateJobRequest): Promise<UploadJobResponse> => {

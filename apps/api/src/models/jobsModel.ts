@@ -17,15 +17,21 @@ export async function getJobById(topicId: string | number): Promise<job_posting 
  * 分页获取岗位列表
  * @param skip 跳过数量
  * @param take 获取数量
- * @returns 岗位列表
+ * @returns 岗位列表和总数
  */
-export async function getJobList(skip: number, take: number): Promise<job_posting[]> {
-  const jobs = await prisma.job_posting.findMany({
-    orderBy: { create_time: 'desc' },
-    skip,
-    take,
-  });
-  return jobs;
+export async function getJobList(
+  skip: number,
+  take: number
+): Promise<{ jobs: job_posting[]; total: number }> {
+  const [jobs, total] = await Promise.all([
+    prisma.job_posting.findMany({
+      orderBy: { create_time: 'desc' },
+      skip,
+      take,
+    }),
+    prisma.job_posting.count(),
+  ]);
+  return { jobs, total };
 }
 
 /**
