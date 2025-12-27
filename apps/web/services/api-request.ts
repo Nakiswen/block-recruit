@@ -30,13 +30,24 @@ const logRequest = (config: AxiosRequestConfig) => {
   }
 };
 
-// 请求拦截器，用于添加认证令牌
+// 请求拦截器，用于添加认证令牌(从Google OAuth获取)
 instance.interceptors.request.use(
-  config => {
-    // 在浏览器环境中获取token
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async config => {
+    // 在浏览器环境中，尝试从 NextAuth session 获取 token
+    if (typeof window !== 'undefined') {
+      try {
+        // 调用 NextAuth 的 session API 获取当前用户信息
+        const sessionResponse = await fetch('/api/auth/session');
+        if (sessionResponse.ok) {
+          const session = await sessionResponse.json();
+          // 如果有 session，使用 email 作为认证（优先级高于 id，因为 id 是 JWT sub）
+          if (session?.user) {
+            config.headers.Authorization = `Bearer ${session.user.email || session.user.id}`;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to get session:', error);
+      }
     }
 
     // 修改API请求路径，确保正确处理
@@ -74,10 +85,10 @@ instance.interceptors.response.use(
     // 处理错误响应
     const status = error.response?.status;
 
-    // 处理 401 未授权错误，可以在这里执行登出操作
+    // 处理 401 未授权错误
     if (status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      // 可以添加重定向到登录页面的逻辑
+      // Google OAuth 会自动处理 session 过期，这里不需要额外处理
+      console.warn('Authentication failed - user may need to sign in again');
     }
 
     // 输出更详细的错误信息，方便调试

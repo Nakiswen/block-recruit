@@ -11,13 +11,6 @@ import {
   currentResumeIdAtom,
   resumeProcessingStatusAtom,
 } from '../store/matchedJobsAtom';
-import {
-  walletStateAtom,
-  openWalletModalAtom,
-  loadWalletStateAtom,
-  connectWalletSuccessAtom,
-  disconnectWalletAtom,
-} from '../../../store/walletAtoms';
 import { pollWithInterval, HybridProgressManager } from '../utils';
 
 export default function Home() {
@@ -28,13 +21,6 @@ export default function Home() {
   const [matchingProgress, setMatchingProgress] = useState(0);
   const [matchedJobs, setMatchedJobsAtom] = useAtom(matchedJobsAtom);
   const [matchingStarted, setMatchingStarted] = useState(false);
-
-  // 钱包状态管理
-  const [walletState] = useAtom(walletStateAtom);
-  const [, openWalletModal] = useAtom(openWalletModalAtom);
-  const [, loadWalletState] = useAtom(loadWalletStateAtom);
-  const [, connectWalletSuccess] = useAtom(connectWalletSuccessAtom);
-  const [, disconnectWallet] = useAtom(disconnectWalletAtom);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [, setIsLoading] = useState(false);
 
@@ -154,11 +140,8 @@ export default function Home() {
     setResumeProcessingStatus,
   ]);
 
-  // 修复useEffect依赖问题
+  // 初始化数据
   useEffect(() => {
-    // 从 localStorage 恢复钱包状态
-    loadWalletState();
-
     // 检查是否有已上传简历的标志
     const hasUploadedResume = localStorage.getItem('resumeUploaded') === 'true';
     if (hasUploadedResume) {
@@ -171,61 +154,14 @@ export default function Home() {
       }
     }
 
-    // 监听以太坊钱包账户变化
-    const handleAccountsChanged = (accounts: string[]) => {
-      if (accounts.length === 0) {
-        // 用户断开钱包连接
-        localStorage.removeItem('token');
-        localStorage.removeItem('walletAuth');
-        localStorage.removeItem('walletAuthAddress');
-        disconnectWallet();
-      } else {
-        // 用户切换了账户，使用新地址重新登录
-        const newAddress = accounts[0];
-        localStorage.setItem('walletAuthAddress', newAddress);
-        // 这里可以选择自动重新登录或提示用户重新登录
-      }
-    };
-
-    // 添加以太坊钱包事件监听
-    if (typeof window.ethereum !== 'undefined') {
-      (
-        window.ethereum as { on: (event: string, handler: (accounts: string[]) => void) => void }
-      ).on('accountsChanged', handleAccountsChanged);
-    }
-
-    // 监听localStorage变化，确保顶部导航栏和首页状态同步
+    // 监听localStorage变化
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'walletAuth') {
-        const walletConnected = e.newValue === 'true';
-        if (walletConnected) {
-          // 钱包已连接，但不自动获取用户信息
-          // 用户可以通过点击相关按钮来获取信息
-          const savedAddress = localStorage.getItem('walletAuthAddress');
-          if (savedAddress) {
-            connectWalletSuccess({ address: savedAddress });
-          }
-        } else {
-          disconnectWallet();
-        }
-      } else if (e.key === 'resumeUploaded') {
+      if (e.key === 'resumeUploaded') {
         const resumeUploaded = e.newValue === 'true';
         setResumeUploaded(resumeUploaded);
       } else if (e.key === 'resumeId') {
         const resumeId = e.newValue;
         setResumeId(resumeId);
-      }
-    };
-
-    // 页面内更新处理
-    const handleWalletEvent = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail && detail.connected !== undefined) {
-        if (detail.connected && detail.address) {
-          connectWalletSuccess({ address: detail.address });
-        } else if (!detail.connected) {
-          disconnectWallet();
-        }
       }
     };
 
@@ -240,24 +176,13 @@ export default function Home() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    document.addEventListener('walletConnected', handleWalletEvent);
     document.addEventListener('resumeUploaded', handleResumeEvent);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      document.removeEventListener('walletConnected', handleWalletEvent);
       document.removeEventListener('resumeUploaded', handleResumeEvent);
-
-      // 移除以太坊钱包事件监听
-      if (typeof window?.ethereum !== 'undefined') {
-        (
-          window?.ethereum as {
-            removeListener: (event: string, handler: (accounts: string[]) => void) => void;
-          }
-        ).removeListener('accountsChanged', handleAccountsChanged);
-      }
     };
-  }, [connectWalletSuccess, disconnectWallet, loadWalletState]);
+  }, []);
 
   // 处理简历文件选择
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,11 +249,6 @@ export default function Home() {
     }
   }, [resumeFile]);
 
-  // 处理钱包连接
-  const handleConnectWallet = () => {
-    openWalletModal();
-  };
-
   return (
     <div className="flex items-center justify-center py-10">
       <div className="max-w-md mx-auto px-4">
@@ -365,29 +285,10 @@ export default function Home() {
             <p className="text-gray-600">上传简历，AI智能匹配最适合的岗位</p>
           </div>
 
-          {!walletState.isConnected ? (
+          {!resumeUploaded ? (
             <div className="space-y-4">
               <div className="text-center">
-                <div className="text-sm text-gray-600 mb-4">第一步：连接钱包</div>
-                <Button
-                  size="lg"
-                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
-                  onClick={handleConnectWallet}
-                >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1z" />
-                  </svg>
-                  连接钱包
-                </Button>
-              </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500">支持 MetaMask、WalletConnect 等主流钱包</div>
-              </div>
-            </div>
-          ) : !resumeUploaded ? (
-            <div className="space-y-4">
-              <div className="text-center">
-                <div className="text-sm text-gray-600 mb-4">第二步：上传简历</div>
+                <div className="text-sm text-gray-600 mb-4">上传简历</div>
               </div>
 
               <div className="mb-4">

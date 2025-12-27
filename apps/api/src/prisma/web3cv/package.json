@@ -1,8 +1,7 @@
 {
-  "name": "prisma-client-3a96eaffeb57f2dd00270383007ef10e6a5bf94e0fc0d5b3fe122817144a43ec",
-  "main": "index.js",
-  "types": "index.d.ts",
-  "browser": "index-browser.js",
+  "name": "prisma-client-b8b79e2cc48e97771c17f8b7a4fe3cdfb6cdfa686ec508e15fee821ef8a780f6",
+  "version": "5.22.0",
+  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -92,6 +91,7 @@
     },
     "./*": "./*"
   },
-  "version": "5.22.0",
-  "sideEffects": false
+  "main": "index.js",
+  "browser": "index-browser.js",
+  "types": "index.d.ts"
 }
