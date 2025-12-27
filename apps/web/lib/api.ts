@@ -16,13 +16,24 @@ const api = axios.create({
   },
 });
 
-// 请求拦截器，用于添加认证令牌
+// 请求拦截器，用于添加认证令牌(从Google OAuth获取)
 api.interceptors.request.use(
-  config => {
-    // 在浏览器环境中获取token
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async config => {
+    // 在浏览器环境中，尝试从 NextAuth session 获取 token
+    if (typeof window !== 'undefined') {
+      try {
+        // 调用 NextAuth 的 session API 获取当前用户信息
+        const sessionResponse = await fetch('/api/auth/session');
+        if (sessionResponse.ok) {
+          const session = await sessionResponse.json();
+          // 如果有 session，使用 email 作为认证（优先级高于 id，因为 id 是 JWT sub）
+          if (session?.user) {
+            config.headers.Authorization = `Bearer ${session.user.email || session.user.id}`;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to get session:', error);
+      }
     }
     return config;
   },
@@ -75,25 +86,8 @@ export interface Resume {
   createdAt: string;
 }
 
-export interface LoginRequest {
-  address: string;
-  signature: string;
-  nonce: string;
-}
-
-export interface LoginResponse {
-  token: string;
-}
-
 // API服务方法
-
-// 认证相关
-export const authServices = {
-  login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await api.post<LoginResponse>('/auth/login', data);
-    return response.data;
-  },
-};
+// 认证相关的服务已移除，现在使用 Google OAuth (NextAuth)
 
 // 岗位上传请求类型
 export interface CreateJobRequest {

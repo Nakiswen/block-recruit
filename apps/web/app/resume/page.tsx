@@ -1,68 +1,22 @@
 'use client';
 
-import { getAuthHeaders, connectWallet } from 'web3-utils/wallet';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 
 export default function ResumePage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [step, setStep] = useState<'select-job' | 'upload-resume'>('select-job');
   const [selectedJob, setSelectedJob] = useState<Record<string, unknown> | null>(null);
   const [jobs, setJobs] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fileContent, setFileContent] = useState<string>('');
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [connectingWallet, setConnectingWallet] = useState(false);
 
-  // 检查钱包连接状态
-  const checkWalletConnection = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      const walletAuth = localStorage.getItem('walletAuth');
-      const walletAddress = localStorage.getItem('walletAuthAddress');
-      setIsWalletConnected(!!(walletAuth && walletAddress));
-    }
-  }, []);
-
-  // 监听localStorage变化，用于跨组件同步钱包状态
-  const handleStorageChange = useCallback(
-    (event: StorageEvent) => {
-      if (event.key === 'walletAuth' || event.key === 'walletAuthAddress') {
-        checkWalletConnection();
-      }
-    },
-    [checkWalletConnection]
-  );
-
-  // 页面加载时获取岗位列表和检查钱包状态
+  // 页面加载时获取岗位列表
   useEffect(() => {
     fetchJobs();
-    checkWalletConnection();
-
-    // 添加钱包状态变化监听
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [checkWalletConnection, handleStorageChange]);
-
-  // 处理钱包连接
-  const handleConnectWallet = useCallback(async () => {
-    try {
-      setConnectingWallet(true);
-      setError('');
-      const result = await connectWallet();
-      if (result.error) {
-        setError(`连接钱包失败: ${result.error}`);
-      } else {
-        setIsWalletConnected(true);
-      }
-    } catch (error) {
-      setError('连接钱包时发生错误');
-      console.error(error);
-    } finally {
-      setConnectingWallet(false);
-    }
   }, []);
 
   // 获取岗位列表
@@ -79,7 +33,6 @@ export default function ResumePage() {
       setJobs(data);
     } catch (error) {
       setError('获取岗位列表失败');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -90,15 +43,15 @@ export default function ResumePage() {
     try {
       setLoading(true);
 
-      // 再次检查钱包连接状态
-      checkWalletConnection();
-
-      // 检查钱包是否已连接
-      if (!isWalletConnected) {
-        setError('请先连接钱包以创建岗位');
+      // 检查用户是否已登录
+      if (status !== 'authenticated' || !session) {
+        setError('请先登录以创建岗位');
         setLoading(false);
         return;
       }
+
+      // 使用 email 作为认证 token（优先级高于 id，因为 id 是 JWT sub，不是数据库 user.id）
+      const tokenToSend = session?.user?.email || session?.user?.id;
 
       const jobData = {
         title: formData.get('title'),
@@ -111,29 +64,18 @@ export default function ResumePage() {
         },
       };
 
-      // 获取认证头
-      const authHeaders = getAuthHeaders();
-
-      // 检查认证头是否存在
-      if (!authHeaders.Authorization) {
-        setError('无法获取钱包认证信息，请重新连接钱包');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch('/api/business/job', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders, // 添加认证头
+          Authorization: `Bearer ${tokenToSend}`,
         },
         body: JSON.stringify(jobData),
       });
 
       // 检查HTTP状态码
       if (response.status === 401) {
-        setError('钱包认证失败，请重新连接钱包');
-        setIsWalletConnected(false);
+        setError('认证失败，请重新登录');
         setLoading(false);
         return;
       }
@@ -148,11 +90,9 @@ export default function ResumePage() {
       setSelectedJob(data);
       setStep('upload-resume');
     } catch (error: unknown) {
-      // 处理401未授权错误
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage?.includes('401') || errorMessage?.includes('请先连接钱包')) {
-        setError('请先连接钱包以创建岗位');
-        setIsWalletConnected(false); // 重置连接状态
+      if (errorMessage?.includes('401')) {
+        setError('认证失败，请重新登录');
       } else {
         setError('创建岗位失败: ' + errorMessage);
       }
@@ -201,8 +141,15 @@ export default function ResumePage() {
       formData.append('jobId', String(selectedJob?.id || ''));
       formData.append('content', fileContent);
 
+      // 使用 email 作为认证 token
+      const tokenToSend = session?.user?.email || session?.user?.id;
+
       const response = await fetch('/api/business/resume/analyze', {
         method: 'POST',
+        headers: {
+          // 添加 Google OAuth token (使用 email)
+          Authorization: `Bearer ${tokenToSend}`,
+        },
         body: formData,
       });
 
@@ -227,15 +174,6 @@ export default function ResumePage() {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
-          {!isWalletConnected && (
-            <button
-              className="ml-4 underline text-blue-600 hover:text-blue-800"
-              onClick={handleConnectWallet}
-              disabled={connectingWallet}
-            >
-              {connectingWallet ? '连接中...' : '立即连接钱包'}
-            </button>
-          )}
         </div>
       )}
 
@@ -243,18 +181,8 @@ export default function ResumePage() {
         <div>
           <h2 className="text-xl font-semibold mb-4">
             选择或创建岗位
-            {!isWalletConnected && (
-              <span className="text-sm font-normal text-red-500 ml-2">
-                (创建岗位需要先
-                <button
-                  className="underline text-blue-600 hover:text-blue-800 mx-1"
-                  onClick={handleConnectWallet}
-                  disabled={connectingWallet}
-                >
-                  {connectingWallet ? '连接中...' : '连接钱包'}
-                </button>
-                )
-              </span>
+            {status !== 'authenticated' && (
+              <span className="text-sm font-normal text-red-500 ml-2">(创建岗位需要先登录)</span>
             )}
           </h2>
 

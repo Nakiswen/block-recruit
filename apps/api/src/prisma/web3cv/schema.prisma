@@ -1,6 +1,9 @@
+// 区块链招聘平台核心表结构
+// 版本：v2.0
+
 generator client {
   provider      = "prisma-client-js"
-  output        = "./"
+  output        = "../apps/api/src/prisma/web3cv"
   binaryTargets = ["native", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
 }
 
@@ -9,47 +12,51 @@ datasource db {
   url      = env("WEB3CV_DATABASE_URL")
 }
 
-/// 用户表，记录所有注册用户的钱包地址及基础信息
+/// 用户表，记录所有注册用户的钱包地址及基础信息（支持钱包登录和Google OAuth登录）
 model User {
   id           String        @id @default(cuid())
-  address      String        @unique
-  nickname     String?
-  email        String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  applications Application[]
-  nftProofs    NFTProof[]
+  address      String?       @unique // 钱包地址，可选（钱包登录用户）
+  nickname     String? // 用户昵称
+  email        String?       @unique // 邮箱（Google登录必填）
+  googleId     String?       @unique // Google账号ID（Google登录用户）
+  avatar       String? // 用户头像URL
+  createdAt    DateTime      @default(now()) // 注册时间
+  updatedAt    DateTime      @updatedAt // 更新时间
+  applications Application[] // 用户的投递记录
+  nftProofs    NFTProof[] // 用户的NFT证明
+  resumes      Resume[] // 用户的简历
 }
 
 /// 岗位表，记录所有招聘岗位信息
 model Job {
   id                 String           @id @default(cuid())
-  title              String
-  description        String
-  jobType            String
-  weights            Json
-  parsedRequirements Json
-  vectorMetadata     Json?
+  title              String // 岗位标题
+  description        String // 原始JD描述
+  jobType            String // 岗位类型
+  weights            Json // 各维度权重
+  parsedRequirements Json // 解析后的结构化要求
+  vectorMetadata     Json? // 向量元数据（维度信息等）
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
-  applications       Application[]
-  resumeAnalyses     ResumeAnalysis[]
+  resumeAnalyses     ResumeAnalysis[] // 关联的简历分析
+  applications       Application[] // 关联的投递记录
 }
 
 /// 简历表，记录用户上传的简历
 model Resume {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   userId     String
-  content    String
-  title      String?
-  filename   String?
-  filetype   String?
-  filesize   Int?
-  parsedData Json?
-  vectorId   String?
-  status     String?   @default("pending")
-  createdAt  DateTime? @default(now()) @db.Timestamptz(6)
-  updatedAt  DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content    String // 原始简历内容
+  title      String? // 简历标题
+  filename   String? // 原始文件名
+  filetype   String? // 文件类型(pdf,docx等)
+  filesize   Int? // 文件大小(字节)
+  parsedData Json? // 解析后的结构化内容
+  vectorId   String? // 向量数据库中的向量ID
+  status     String   @default("pending") // 处理状态：pending, processed, failed
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -59,117 +66,37 @@ model Resume {
 model ResumeAnalysis {
   id              String   @id @default(cuid())
   jobId           String
-  resumeContent   String
-  parsedResume    Json
-  totalScore      Float
-  skillScore      Float
-  experienceScore Float
-  matchingPoints  Json
-  suggestions     Json
-  recommended     Boolean
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeContent   String // 原始简历内容
+  parsedResume    Json // 解析后的结构化简历数据
+  totalScore      Float // 总评分
+  skillScore      Float // 技能匹配分
+  experienceScore Float // 经验匹配分
+  matchingPoints  Json // 匹配要点
+  suggestions     Json // 改进建议
+  recommended     Boolean // 是否推荐
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
 
 /// 投递记录表，记录用户对岗位的投递行为
 model Application {
   id        String   @id @default(cuid())
   userId    String
-  jobId     String
-  status    String
-  createdAt DateTime @default(now())
-  job       Job      @relation(fields: [jobId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id])
+  status    String // 投递状态，如 pending, accepted, rejected
+  createdAt DateTime @default(now())
 }
 
 /// NFT证明表，记录用户的链上成就/组织等证明
 model NFTProof {
   id       String   @id @default(cuid())
   userId   String
-  nftType  String
-  tokenId  String
-  txHash   String
-  mintedAt DateTime
   user     User     @relation(fields: [userId], references: [id])
-}
-
-/// 职位发布表 - 存储从其他招聘网站爬取的职位信息
-model job_posting {
-  topic_id             String   @id @db.VarChar(32)
-  content              String?
-  content2             String?
-  content3             String?
-  content5             String?
-  email                String?  @db.VarChar(255)
-  phone                String?  @db.VarChar(20)
-  wechat               String?  @db.VarChar(50)
-  telegram             String?  @db.VarChar(50)
-  position_name        String   @db.VarChar(100)
-  position_id          BigInt?
-  view_count           Int?     @default(0)
-  applied              Boolean? @default(false)
-  apply_count          Int?     @default(0)
-  create_time          BigInt?
-  url                  String?
-  work_type_id         Int?
-  work_type_name       String?  @db.VarChar(50)
-  office_mode_id       Int?
-  office_mode_name     String?  @db.VarChar(50)
-  company              String   @db.VarChar(100)
-  company_introduction String?
-  company_size_name    String?  @db.VarChar(50)
-  company_logo         String?
-  company_website      String?
-  company_id           BigInt?
-  min_salary           Decimal? @db.Decimal(10, 2)
-  max_salary           Decimal? @db.Decimal(10, 2)
-  lever_id             Int?
-  lever_name           String?  @db.VarChar(50)
-  location             String?  @db.VarChar(255)
-  base                 String?  @db.VarChar(50)
-  ffrom                String?  @db.VarChar(50)
-  status               Int?     @default(0)
-}
-
-/// 职位标签关系表 - 存储职位与标签的多对多关系
-model job_tag_relation {
-  topic_id String  @db.VarChar(32)
-  tag_id   BigInt
-  ffrom    String? @db.VarChar(50)
-
-  @@id([topic_id, tag_id])
-}
-
-/// 标签表 - 存储职位相关的标签信息
-model tag {
-  tag_id   BigInt  @id
-  tag_name String  @db.VarChar(100)
-  ffrom    String? @db.VarChar(50)
-}
-
-/// 发布岗位信息的用户信息表 - 存储发布岗位信息的用户的基本信息
-model user_info {
-  id             BigInt   @id
-  nickname       String   @db.VarChar(255)
-  avatar         String?
-  small_avatar   String?
-  topic_count    Int?     @default(0)
-  comment_count  Int?     @default(0)
-  fans_count     Int?     @default(0)
-  follow_count   Int?     @default(0)
-  score          Int?
-  description    String?
-  create_time    BigInt?
-  wallet_address String?  @db.VarChar(255)
-  ffrom          String?  @db.VarChar(50)
-  followed       Boolean? @default(false)
-}
-
-model job_user_relation {
-  topic_id String  @db.VarChar(32)
-  user_id  BigInt
-  ffrom    String? @db.VarChar(50)
-
-  @@id([topic_id, user_id])
+  nftType  String // 成就/组织等类型
+  tokenId  String // 链上TokenId
+  txHash   String // 链上交易哈希
+  mintedAt DateTime // 铸造时间
 }

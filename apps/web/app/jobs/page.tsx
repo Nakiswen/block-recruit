@@ -67,23 +67,23 @@ export default function JobsPage() {
 
         if (storedResumeId) {
           try {
-            const matchedJobs = await jobServices.getJobs();
-            setJobs(matchedJobs as Job[]);
+            const response = await jobServices.getJobs();
+            setJobs(response.jobs);
           } catch (err) {
             setError('获取岗位数据失败，请稍后重试');
 
             // 获取所有岗位作为备选
             try {
-              const allJobs = await jobServices.getJobs();
-              setJobs(allJobs as Job[]);
+              const response = await jobServices.getJobs();
+              setJobs(response.jobs);
             } catch (jobsError) {
               setError('获取岗位数据失败，请稍后重试');
             }
           }
         } else {
           // 如果没有简历ID，获取所有岗位
-          const allJobs = await jobServices.getJobs();
-          setJobs(allJobs as Job[]);
+          const response = await jobServices.getJobs();
+          setJobs(response.jobs);
         }
       } catch (err) {
         setError('加载数据失败，请稍后重试');

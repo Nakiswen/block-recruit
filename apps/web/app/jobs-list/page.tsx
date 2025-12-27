@@ -1,11 +1,15 @@
 'use client';
 
-import { ChevronLeftIcon, ChevronRightIcon , CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
+} from '@heroicons/react/20/solid';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import { Button } from 'ui';
 
 import { jobServices } from '../../lib/api';
 import { Job as BaseJob } from '../../services/api-client';
@@ -135,16 +139,19 @@ export default function JobsListPage() {
   };
 
   return (
-    <div className="flex flex-col max-w-6xl mx-auto" style={{ height: 'calc(100vh - 220px)' }}>
+    <div className="flex flex-col max-w-6xl mx-auto" style={{ height: 'calc(100vh - 180px)' }}>
       {/* 顶部栏 - 固定高度 */}
-      <div className="flex-shrink-0 flex justify-between items-center px-4 py-6 border-b border-gray-200 bg-white">
+      <div className="flex-shrink-0 flex justify-between items-center px-3 py-3 border-b border-gray-200 bg-white">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">岗位列表</h1>
-          <p className="text-gray-600 mt-2">共 {totalJobs} 个岗位</p>
+          <h1 className="text-lg font-semibold text-gray-900">岗位列表</h1>
+          <p className="text-xs text-gray-600 mt-0.5">共 {totalJobs} 个岗位</p>
         </div>
-        <Button variant="outline" onClick={() => router.push('/')}>
+        <button
+          onClick={() => router.push('/')}
+          className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+        >
           返回主页
-        </Button>
+        </button>
       </div>
 
       {/* 错误提示 - 固定在顶部 */}
