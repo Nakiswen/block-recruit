@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
+import { Navigation } from 'ui';
 import { Providers } from './providers';
-
-// 使用动态导入优化首屏加载性能
-const Navigation = dynamic(() => import('ui').then(mod => mod.Navigation), {
-  ssr: false,
-  loading: () => <div className="h-16 bg-white shadow-md"></div>,
-});
 
 interface ClientLayoutProps {
   children: React.ReactNode;
