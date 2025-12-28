@@ -1,13 +1,15 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Disclosure } from '@headlessui/react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import React, { useCallback, useMemo } from 'react';
 
 import WalletConnect from './WalletConnect';
 import GoogleSignIn from './GoogleSignIn';
+import Button from './Button';
 
 interface NavigationItem {
   name: string;
@@ -108,7 +110,18 @@ const Navigation: React.FC<NavigationProps> = ({
   // 渲染认证组件（Google 或钱包）
   const renderAuthComponent = () => {
     if (googleAuthEnabled) {
-      return <GoogleSignIn onSignIn={onSignIn} onSignOut={onSignOut} />;
+      return (
+        <Suspense
+          fallback={
+            <Button variant="primary" size="sm" disabled className="flex items-center">
+              <UserCircleIcon className="h-5 w-5 mr-2" />
+              加载中...
+            </Button>
+          }
+        >
+          <GoogleSignIn onSignIn={onSignIn} onSignOut={onSignOut} />
+        </Suspense>
+      );
     }
     if (walletConnectEnabled) {
       return (
