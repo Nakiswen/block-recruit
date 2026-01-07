@@ -14,8 +14,9 @@ import type { CreateJobDTO } from '@/types/job.dto';
 export async function getJobList(ctx: Context, next: Next): Promise<void> {
   const page = Number(ctx.query.page) || 1;
   const pageSize = Number(ctx.query.pageSize) || 20;
+  const keyword = typeof ctx.query.keyword === 'string' ? ctx.query.keyword.trim() : undefined;
   try {
-    const { jobs, total, cache } = await jobsService.getJobList(page, pageSize);
+    const { jobs, total, cache } = await jobsService.getJobList(page, pageSize, keyword);
     ctx.body = { code: 0, data: { jobs, total }, cache };
   } catch (error) {
     ctx.status = 500;
