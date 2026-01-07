@@ -188,6 +188,12 @@ export default function JobsListPage() {
             ) : null}
           </div>
           <button
+            onClick={() => router.push('/recruit')}
+            className="px-2.5 py-1.5 text-xs font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-500 transition-colors"
+          >
+            新增岗位
+          </button>
+          <button
             onClick={() => router.push('/')}
             className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
