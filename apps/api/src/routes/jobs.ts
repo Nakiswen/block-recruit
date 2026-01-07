@@ -22,6 +22,11 @@ const router = new Router({ prefix: '/jobs' });
  *         schema:
  *           type: integer
  *         description: 每页数量
+ *       - in: query
+ *         name: keyword
+ *         schema:
+ *           type: string
+ *         description: 模糊搜索关键词
  *     responses:
  *       200:
  *         description: 返回岗位列表

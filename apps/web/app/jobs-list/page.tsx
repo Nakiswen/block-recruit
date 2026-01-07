@@ -5,6 +5,8 @@ import {
   ChevronRightIcon,
   CheckIcon,
   ChevronUpDownIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
 } from '@heroicons/react/20/solid';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment, useEffect, useState } from 'react';
@@ -47,8 +49,23 @@ export default function JobsListPage() {
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
   const [totalJobs, setTotalJobs] = useState(0);
 
+  // 搜索状态
+  const [searchInput, setSearchInput] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
   // 计算总页数
   const totalPages = Math.ceil(totalJobs / pageSize.value);
+
+  // 搜索输入防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = searchInput.trim();
+      setSearchKeyword(trimmed);
+      setCurrentPage(1);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // 获取岗位数据
   useEffect(() => {
@@ -61,6 +78,7 @@ export default function JobsListPage() {
         const allJobs = await jobServices.getJobs({
           page: currentPage,
           pageSize: pageSize.value,
+          ...(searchKeyword ? { keyword: searchKeyword } : {}),
         });
 
         setJobs(allJobs.jobs as Job[]);
@@ -74,7 +92,7 @@ export default function JobsListPage() {
     };
 
     fetchJobs();
-  }, [currentPage, pageSize]);
+  }, [currentPage, pageSize, searchKeyword]);
 
   // 切换岗位详情展开/收起
   const toggleJobExpanded = (jobId: string) => {
@@ -146,12 +164,42 @@ export default function JobsListPage() {
           <h1 className="text-lg font-semibold text-gray-900">岗位列表</h1>
           <p className="text-xs text-gray-600 mt-0.5">共 {totalJobs} 个岗位</p>
         </div>
-        <button
-          onClick={() => router.push('/')}
-          className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-        >
-          返回主页
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <MagnifyingGlassIcon
+              className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+              aria-hidden="true"
+            />
+            <input
+              value={searchInput}
+              onChange={event => setSearchInput(event.target.value)}
+              placeholder="搜索岗位/公司/地点"
+              className="w-56 rounded-md border border-gray-300 bg-white py-1.5 pl-8 pr-7 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            {searchInput ? (
+              <button
+                type="button"
+                onClick={() => setSearchInput('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="清空搜索"
+              >
+                <XMarkIcon className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+          <button
+            onClick={() => router.push('/recruit')}
+            className="px-2.5 py-1.5 text-xs font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-500 transition-colors"
+          >
+            新增岗位
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            返回主页
+          </button>
+        </div>
       </div>
 
       {/* 错误提示 - 固定在顶部 */}

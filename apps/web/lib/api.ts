@@ -129,6 +129,7 @@ export const jobServices = {
   getJobs: async (params?: {
     page?: number;
     pageSize?: number;
+    keyword?: string;
   }): Promise<{
     jobs: Job[];
     total: number;
