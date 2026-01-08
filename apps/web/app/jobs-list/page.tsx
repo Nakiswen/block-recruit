@@ -44,6 +44,8 @@ export default function JobsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedState, setExpandedState] = useState<Record<string, boolean>>({});
 
+  const [manualOnly] = useState(true);
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(pageSizeOptions[0]);
@@ -78,7 +80,7 @@ export default function JobsListPage() {
         const allJobs = await jobServices.getJobs({
           page: currentPage,
           pageSize: pageSize.value,
-          manualOnly: true,
+          manualOnly,
           ...(searchKeyword ? { keyword: searchKeyword } : {}),
         });
 
@@ -93,7 +95,7 @@ export default function JobsListPage() {
     };
 
     fetchJobs();
-  }, [currentPage, pageSize, searchKeyword]);
+  }, [currentPage, pageSize, searchKeyword, manualOnly]);
 
   // 切换岗位详情展开/收起
   const toggleJobExpanded = (jobId: string) => {
@@ -166,6 +168,18 @@ export default function JobsListPage() {
           <p className="text-xs text-gray-600 mt-0.5">共 {totalJobs} 个岗位</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* <label className="flex items-center gap-1.5 text-xs text-gray-700">
+            <input
+              type="checkbox"
+              checked={manualOnly}
+              onChange={event => {
+                setManualOnly(event.target.checked);
+                setCurrentPage(1);
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            仅人工
+          </label> */}
           <div className="relative">
             <MagnifyingGlassIcon
               className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
