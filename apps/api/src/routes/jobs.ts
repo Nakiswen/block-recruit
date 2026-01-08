@@ -27,6 +27,11 @@ const router = new Router({ prefix: '/jobs' });
  *         schema:
  *           type: string
  *         description: 模糊搜索关键词
+ *       - in: query
+ *         name: manualOnly
+ *         schema:
+ *           type: boolean
+ *         description: 仅查询手动上传的岗位
  *     responses:
  *       200:
  *         description: 返回岗位列表

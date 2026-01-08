@@ -13,11 +13,12 @@ import { validateCreateJobDTO } from '@/types/job.dto';
 export async function getJobList(
   page: number,
   pageSize: number,
-  keyword?: string
+  keyword?: string,
+  manualOnly?: boolean
 ): Promise<{ jobs: any[]; total: number; cache: boolean }> {
   const skip = (page - 1) * pageSize;
   const normalizedKeyword = keyword?.trim() || '';
-  const cacheKey = `job_list_${page}_${pageSize}_${normalizedKeyword}`;
+  const cacheKey = `job_list_${page}_${pageSize}_${normalizedKeyword}_${manualOnly ? 'manual' : 'all'}`;
   // 优先查缓存
   const cacheData = await redis.get(cacheKey);
   if (cacheData) {
@@ -25,7 +26,12 @@ export async function getJobList(
     return { ...cachedResult, cache: true };
   }
   // 查询数据库
-  const { jobs: jobsData, total } = await jobsModel.getJobList(skip, pageSize, normalizedKeyword);
+  const { jobs: jobsData, total } = await jobsModel.getJobList(
+    skip,
+    pageSize,
+    normalizedKeyword,
+    manualOnly
+  );
 
   // 将数据库字段映射为前端需要的格式
   const jobs = jobsData.map(job => ({

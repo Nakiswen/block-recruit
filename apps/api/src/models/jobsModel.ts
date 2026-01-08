@@ -22,31 +22,35 @@ export async function getJobById(topicId: string | number): Promise<job_posting 
 export async function getJobList(
   skip: number,
   take: number,
-  keyword?: string
+  keyword?: string,
+  manualOnly?: boolean
 ): Promise<{ jobs: job_posting[]; total: number }> {
   const trimmedKeyword = keyword?.trim();
-  const where = trimmedKeyword
-    ? {
-        OR: [
-          { position_name: { contains: trimmedKeyword } },
-          { company: { contains: trimmedKeyword } },
-          { location: { contains: trimmedKeyword } },
-          { content: { contains: trimmedKeyword } },
-          { content2: { contains: trimmedKeyword } },
-          { content3: { contains: trimmedKeyword } },
-          { content5: { contains: trimmedKeyword } },
-          { company_introduction: { contains: trimmedKeyword } },
-        ],
-      }
-    : undefined;
+  const where = {
+    ...(manualOnly ? { ffrom: 'manual_upload' } : {}),
+    ...(trimmedKeyword
+      ? {
+          OR: [
+            { position_name: { contains: trimmedKeyword } },
+            { company: { contains: trimmedKeyword } },
+            { location: { contains: trimmedKeyword } },
+            { content: { contains: trimmedKeyword } },
+            { content2: { contains: trimmedKeyword } },
+            { content3: { contains: trimmedKeyword } },
+            { content5: { contains: trimmedKeyword } },
+            { company_introduction: { contains: trimmedKeyword } },
+          ],
+        }
+      : {}),
+  };
   const [jobs, total] = await Promise.all([
     prisma.job_posting.findMany({
-      where,
+      where: Object.keys(where).length ? where : undefined,
       orderBy: { create_time: 'desc' },
       skip,
       take,
     }),
-    prisma.job_posting.count({ where }),
+    prisma.job_posting.count({ where: Object.keys(where).length ? where : undefined }),
   ]);
   return { jobs, total };
 }
