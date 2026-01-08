@@ -15,8 +15,17 @@ export async function getJobList(ctx: Context, next: Next): Promise<void> {
   const page = Number(ctx.query.page) || 1;
   const pageSize = Number(ctx.query.pageSize) || 20;
   const keyword = typeof ctx.query.keyword === 'string' ? ctx.query.keyword.trim() : undefined;
+  const manualOnly =
+    typeof ctx.query.manualOnly === 'string'
+      ? ctx.query.manualOnly === 'true'
+      : Boolean(ctx.query.manualOnly);
   try {
-    const { jobs, total, cache } = await jobsService.getJobList(page, pageSize, keyword);
+    const { jobs, total, cache } = await jobsService.getJobList(
+      page,
+      pageSize,
+      keyword,
+      manualOnly
+    );
     ctx.body = { code: 0, data: { jobs, total }, cache };
   } catch (error) {
     ctx.status = 500;

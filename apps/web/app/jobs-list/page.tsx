@@ -78,6 +78,7 @@ export default function JobsListPage() {
         const allJobs = await jobServices.getJobs({
           page: currentPage,
           pageSize: pageSize.value,
+          manualOnly: true,
           ...(searchKeyword ? { keyword: searchKeyword } : {}),
         });
 

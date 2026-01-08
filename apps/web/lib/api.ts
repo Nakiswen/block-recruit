@@ -130,6 +130,7 @@ export const jobServices = {
     page?: number;
     pageSize?: number;
     keyword?: string;
+    manualOnly?: boolean;
   }): Promise<{
     jobs: Job[];
     total: number;
