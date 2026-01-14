@@ -1,41 +1,64 @@
-/* eslint-disable */
-// @ts-nocheck
 import NextAuth from 'next-auth';
-import type { NextAuthConfig } from 'next-auth';
 import Google from 'next-auth/providers/google';
+import type { Session, User, NextAuthResult } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+interface ExtendedToken extends JWT {
+  googleId?: string;
+}
+
+interface ExtendedUser extends User {
+  googleId?: string;
+  id?: string;
+}
+
+interface ExtendedSession extends Session {
+  user: ExtendedUser;
+}
+
+const googleClientId = process.env.AUTH_GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.AUTH_GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
+
+const nextAuth: NextAuthResult = NextAuth({
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: googleClientId!,
+      clientSecret: googleClientSecret!,
     }),
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
+      const extendedToken = token as ExtendedToken;
       if (account && profile) {
-        token.googleId = profile.sub;
-        token.email = profile.email;
-        token.name = profile.name;
-        token.picture = (profile as any).picture;
+        extendedToken.googleId = profile.sub ?? undefined;
+        extendedToken.email = profile.email;
+        extendedToken.name = profile.name;
+        extendedToken.picture = (profile as { picture?: string }).picture;
       }
-      return token;
+      return extendedToken;
     },
     async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).googleId = token.googleId;
-        (session.user as any).id = token.sub;
+      const extendedSession = session as ExtendedSession;
+      const extendedToken = token as ExtendedToken;
+
+      if (extendedSession.user) {
+        extendedSession.user.googleId = extendedToken.googleId;
+        extendedSession.user.id = extendedToken.sub;
       }
-      return session;
+      return extendedSession;
     },
   },
   pages: {
     signIn: '/',
-    error: '/auth/error', // 自定义错误页面以获取更多信息
+    error: '/auth/error',
   },
   session: {
     strategy: 'jwt',
     maxAge: 7 * 24 * 60 * 60,
   },
-  debug: process.env.NODE_ENV === 'development', // 开发环境启用调试
 });
+
+export const handlers = nextAuth.handlers;
+export const signIn = nextAuth.signIn;
+export const signOut = nextAuth.signOut;
+export const auth = nextAuth.auth;

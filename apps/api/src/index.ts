@@ -16,18 +16,19 @@ import jobsRouter from './routes/jobs';
 import usersRouter from './routes/users';
 import { ragService } from './services/rag/ragService';
 
-// 加载环境变量
-dotenv.config();
-
-const app = new Koa();
-const router = new Router();
-
 // 获取当前文件的目录路径
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// 加载环境变量：先加载根目录的 .env，再加载本地的 .env.local（会覆盖根目录的同名变量）
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') });
+
+const app = new Koa();
+const router = new Router();
+
 // 基础健康检查路由
-router.get('/health', async (ctx) => {
+router.get('/health', async ctx => {
   ctx.body = { status: 'ok', message: 'API服务运行正常' };
 });
 
@@ -40,16 +41,16 @@ const swaggerDefinition = {
     description: '区块链招聘平台后端API文档',
     contact: {
       name: 'BlockRecruit团队',
-      email: 'support@blockrecruit.example'
+      email: 'support@blockrecruit.example',
     },
     license: {
       name: 'MIT',
-      url: 'https://opensource.org/licenses/MIT'
-    }
+      url: 'https://opensource.org/licenses/MIT',
+    },
   },
   servers: [
     { url: 'http://localhost:3001', description: '本地开发环境' },
-    { url: 'https://api.blockrecruit.example', description: '生产环境' }
+    { url: 'https://api.blockrecruit.example', description: '生产环境' },
   ],
   tags: [
     { name: '认证', description: '用户认证相关接口' },
@@ -57,15 +58,15 @@ const swaggerDefinition = {
     { name: '岗位', description: '区块链岗位相关接口' },
     { name: '用户', description: '用户个人信息相关接口' },
     { name: 'NFT', description: 'NFT证明相关接口' },
-    { name: '投递记录', description: '岗位投递记录相关接口' }
+    { name: '投递记录', description: '岗位投递记录相关接口' },
   ],
   components: {
     securitySchemes: {
       bearerAuth: {
         type: 'http',
         scheme: 'bearer',
-        bearerFormat: 'JWT'
-      }
+        bearerFormat: 'JWT',
+      },
     },
     schemas: {
       User: {
@@ -75,8 +76,8 @@ const swaggerDefinition = {
           address: { type: 'string' },
           nickname: { type: 'string' },
           email: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' }
-        }
+          createdAt: { type: 'string', format: 'date-time' },
+        },
       },
       Job: {
         type: 'object',
@@ -88,8 +89,8 @@ const swaggerDefinition = {
           requirements: { type: 'string' },
           location: { type: 'string' },
           salary: { type: 'string' },
-          createdAt: { type: 'string', format: 'date-time' }
-        }
+          createdAt: { type: 'string', format: 'date-time' },
+        },
       },
       Resume: {
         type: 'object',
@@ -98,22 +99,21 @@ const swaggerDefinition = {
           userId: { type: 'string' },
           content: { type: 'string' },
           skills: { type: 'array', items: { type: 'string' } },
-          createdAt: { type: 'string', format: 'date-time' }
-        }
-      }
-    }
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
   },
-  security: [{
-    bearerAuth: []
-  }]
+  security: [
+    {
+      bearerAuth: [],
+    },
+  ],
 };
 
 const swaggerOptions = {
   swaggerDefinition,
-  apis: [
-    path.resolve(__dirname, './routes/*.ts'), 
-    path.resolve(__dirname, './routes/*.js')
-  ],
+  apis: [path.resolve(__dirname, './routes/*.ts'), path.resolve(__dirname, './routes/*.js')],
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
@@ -134,18 +134,20 @@ app.use(jobsRouter.routes()).use(jobsRouter.allowedMethods());
 app.use(usersRouter.routes()).use(usersRouter.allowedMethods());
 
 // 添加swagger.json端点
-router.get('/swagger.json', async (ctx) => {
+router.get('/swagger.json', async ctx => {
   ctx.type = 'application/json';
   ctx.body = swaggerSpec;
 });
 
 // 挂载Swagger文档 - 使用 koa2-swagger-ui
-app.use(koaSwagger({
-  routePrefix: '/docs',
-  swaggerOptions: {
-    spec: swaggerSpec as Record<string, unknown>,
-  }
-}));
+app.use(
+  koaSwagger({
+    routePrefix: '/docs',
+    swaggerOptions: {
+      spec: swaggerSpec as Record<string, unknown>,
+    },
+  })
+);
 
 // 全局错误处理
 app.on('error', (err, ctx) => {
@@ -170,7 +172,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Koa API服务已启动，监听端口: ${PORT}`);
   console.log(`Swagger文档地址: http://localhost:${PORT}/docs`);
   console.log(`Swagger JSON地址: http://localhost:${PORT}/swagger.json`);
-  
+
   // 初始化服务
   initServices();
 });

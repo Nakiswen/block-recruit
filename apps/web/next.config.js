@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
-const webpack = require('webpack');
 const path = require('path');
+
+// 配置 undici (fetch API) 使用代理
+// NextAuth v5 使用 fetch，需要特殊配置
+if (process.env.GLOBAL_AGENT_HTTP_PROXY) {
+  // 设置 undici 的全局代理
+  const { setGlobalDispatcher, ProxyAgent } = require('undici');
+  const proxyAgent = new ProxyAgent(process.env.GLOBAL_AGENT_HTTP_PROXY);
+  setGlobalDispatcher(proxyAgent);
+}
+
+const webpack = require('webpack');
 
 const nextConfig = {
   reactStrictMode: true,
@@ -23,6 +33,14 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     DATABASE_URL: process.env.DATABASE_URL,
+    // NextAuth v5 配置
+    AUTH_SECRET: process.env.AUTH_SECRET,
+    AUTH_URL: process.env.AUTH_URL,
+    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
+    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
+    // NextAuth 兼容性配置（v4 格式）
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
     // 添加API URL配置，用于客户端直接访问
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   },
