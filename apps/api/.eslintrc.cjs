@@ -1,22 +1,10 @@
 module.exports = {
   extends: ['../../.eslintrc.cjs'],
-  parserOptions: {
-    project: './tsconfig.json', // 确保路径正确
-    tsconfigRootDir: __dirname,
-  },
   settings: {
     'import/resolver': {
       typescript: {
         project: './tsconfig.json',
-        alwaysTryTypes: true
-      },
-      node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        moduleDirectory: ['node_modules', 'src/'],
-      },
-      alias: {
-        map: [['@', './src']],
-        extensions: ['.ts', '.js', '.jsx', '.tsx'],
+        tsconfigRootDir: __dirname,
       },
     },
   },

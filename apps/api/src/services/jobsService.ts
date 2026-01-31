@@ -121,14 +121,15 @@ export async function createManualJob(
   // 异步向量化处理 (不阻塞响应)
   let vectorized = false;
   try {
-    // 动态导入 RAG 服务避免循环依赖
-    const { ragService } = await import('@/services/rag/ragService');
+    // 是否使用 V2 版本的匹配服务
+    const useV2 = process.env.USE_V2_MATCHING === 'true';
 
     // 准备岗位数据用于向量化
     const jobForVectorization = {
       id: topicId,
       title: jobData.positionName,
       company: jobData.company,
+      companyName: jobData.company,
       description: jobData.description || jobData.responsibilities || '',
       responsibilities: jobData.responsibilities || '',
       requirements: jobData.requirements || '',
@@ -140,8 +141,16 @@ export async function createManualJob(
       createdAt: new Date(timestamp).toISOString(),
     };
 
-    // 调用 RAG 服务进行向量化
-    await ragService.processJob(jobForVectorization);
+    if (useV2) {
+      // V2 版本：使用增强的技能标准化和向量化流程
+      const { ragServiceV2 } = await import('@/services/rag/ragServiceV2.js');
+      console.log('🚀 使用 V2 版本处理岗位:', topicId);
+      await ragServiceV2.processJobV2(jobForVectorization);
+    } else {
+      // V1 版本：使用原有的向量化流程
+      const { ragService } = await import('@/services/rag/ragService.js');
+      await ragService.processJob(jobForVectorization);
+    }
     vectorized = true;
   } catch (error) {
     // 向量化失败不影响岗位创建

@@ -1,16 +1,27 @@
 import * as resumesModel from '@/models/resumesModel';
 import * as jobsModel from '@/models/jobsModel';
-import { ragService } from '@/services/rag/ragService';
-import { aiService } from '@/services/ai/aiService';
+import { ragService } from '@/services/rag/ragService.js';
+import { ragServiceV2 } from '@/services/rag/ragServiceV2.js';
+import { aiService } from '@/services/ai/aiService.js';
 import type { Resume } from '@/prisma/web3cv';
 import type { job_posting } from '@/prisma/web3jobs';
-import type { EnhancedMatch, EnhancedMatchForResume } from '@/services/rag/types';
-import { getRealResumeId, getRealResumeIdAsync } from '@/utils/resumeIdMap';
-import redis from '@/utils/redis';
+import type {
+  EnhancedMatch,
+  EnhancedMatchForResume,
+  MatchingResult,
+} from '@/services/rag/types.js';
+import { getRealResumeIdAsync } from '@/utils/resumeIdMap.js';
+import redis from '@/utils/redis.js';
+
+// 是否使用 V2 版本的匹配服务（可通过环境变量控制）
+const USE_V2_MATCHING = process.env.USE_V2_MATCHING === 'true';
 
 // 定义业务错误类型
 export class BusinessError extends Error {
-  constructor(message: string, public code: string) {
+  constructor(
+    message: string,
+    public code: string
+  ) {
     super(message);
     this.name = 'BusinessError';
   }
@@ -33,9 +44,7 @@ export async function uploadResume(
   fileSize?: number
 ): Promise<string> {
   // 仅创建简历记录，不做处理
-  const resume = await resumesModel.createResume(
-    userId, content, fileName, fileType, fileSize
-  );
+  const resume = await resumesModel.createResume(userId, content, fileName, fileType, fileSize);
   return resume.id;
 }
 
@@ -53,46 +62,50 @@ export async function parseResume(resumeId: string): Promise<Resume> {
 
   try {
     // 检查是否已经有解析过的数据
-    if (resume.parsedData && typeof resume.parsedData === 'object' && 
-        'skills' in resume.parsedData && 'educationLevel' in resume.parsedData) {
+    if (
+      resume.parsedData &&
+      typeof resume.parsedData === 'object' &&
+      'skills' in resume.parsedData &&
+      'educationLevel' in resume.parsedData
+    ) {
       console.log(`📄 简历 ${resumeId} 已有解析结果，跳过解析步骤`);
-      
+
       // 更新状态为已解析
       await resumesModel.updateResumeStatus(resumeId, 'parsed');
       return resume;
     }
-    
+
     console.log(`🔍 开始解析简历 ${resumeId}`);
-    
+
     // 创建一个符合aiService要求的Resume对象
     const resumeForAI = {
       id: resume.id,
       userId: resume.userId,
       content: resume.content,
-      name: resume.title || undefined,  // 使用undefined而不是null
+      name: resume.title || undefined, // 使用undefined而不是null
       summary: '',
       workExperience: '',
       projects: '',
       education: '',
       skills: [] as string[],
-      parsedData: undefined  // 确保parsedData是undefined而不是null
+      parsedData: undefined, // 确保parsedData是undefined而不是null
     };
-    
+
     // 使用AI服务解析简历文本
     const structuredData = await aiService.extractResumeInfo(resumeForAI);
     console.log(`✅ 简历 ${resumeId} 解析完成`);
-    
+
     // 将解析结果保存到简历记录
     const updatedResume = await resumesModel.updateResume(resumeId, {
       parsedData: structuredData,
-      status: 'parsed'
+      status: 'parsed',
     });
-    
+
     return updatedResume;
   } catch (error) {
     // 解析失败，更新状态
     await resumesModel.updateResumeStatus(resumeId, 'parse_failed');
-    
+
     throw new BusinessError(
       `简历解析失败: ${error instanceof Error ? error.message : '未知错误'}`,
       'PARSE_FAILED'
@@ -127,25 +140,28 @@ export async function vectorizeResume(resumeId: string): Promise<Resume> {
       userId: resume.userId,
       content: resume.content,
       title: resume.title,
-      parsedData: resume.parsedData
+      parsedData: resume.parsedData,
     };
-    
+
     // 向量化存储
-    const resumeVector = await ragService.vectorizeAndStoreResume(resumeForRAG as unknown as Resume);
-    
+    const resumeVector = await ragService.vectorizeAndStoreResume(
+      resumeForRAG as unknown as Resume
+    );
+
     // 获取向量ID
     const vectorId = `resume_${resumeId}`;
-    
+
     // 更新简历的向量ID
     await resumesModel.updateResumeVectorId(resumeId, vectorId);
     return resumeVector as unknown as Resume;
   } catch (error) {
     // 检查是否是Pinecone初始化错误
-    if (error instanceof Error && 
-        (error.message.includes('未初始化') || 
-         error.message.includes('初始化失败') || 
-         error.message.includes('Pinecone'))) {
-      
+    if (
+      error instanceof Error &&
+      (error.message.includes('未初始化') ||
+        error.message.includes('初始化失败') ||
+        error.message.includes('Pinecone'))
+    ) {
       // 更新状态为已处理但未向量化
       await resumesModel.updateResumeStatus(resumeId, 'processed');
       throw new BusinessError(
@@ -153,7 +169,7 @@ export async function vectorizeResume(resumeId: string): Promise<Resume> {
         'VECTORDB_NOT_INITIALIZED'
       );
     }
-    
+
     // 其他错误则更新状态为向量化失败并抛出异常
     await resumesModel.updateResumeStatus(resumeId, 'vectorize_failed');
     throw new BusinessError(
@@ -177,17 +193,19 @@ export async function createResumeAndProcessAsync(
   userId: string,
   content: string,
   fileName?: string,
-  fileType?: string, 
+  fileType?: string,
   fileSize?: number
 ): Promise<string> {
   // 生成临时ID
   const tempResumeId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   // 启动完全异步的处理流程
-  processResumeCompletelyAsync(tempResumeId, userId, content, fileName, fileType, fileSize).catch(error => {
-    console.error(`异步处理简历 ${tempResumeId} 失败:`, error);
-  });
-  
+  processResumeCompletelyAsync(tempResumeId, userId, content, fileName, fileType, fileSize).catch(
+    error => {
+      console.error(`异步处理简历 ${tempResumeId} 失败:`, error);
+    }
+  );
+
   return tempResumeId;
 }
 
@@ -210,30 +228,30 @@ async function processResumeCompletelyAsync(
 ): Promise<void> {
   try {
     console.log(`🔄 开始完全异步处理简历 ${tempResumeId}`);
-    
+
     // 步骤1: 异步保存到数据库
     const resumeId = await uploadResume(userId, content, fileName, fileType, fileSize);
     console.log(`✅ 简历 ${tempResumeId} 已保存到数据库，真实ID: ${resumeId}`);
-    
+
     // 步骤2: 异步解析简历
     await parseResume(resumeId);
     console.log(`✅ 简历 ${resumeId} 解析完成`);
-    
+
     // 步骤3: 异步向量化简历
     await vectorizeResume(resumeId);
     console.log(`✅ 简历 ${resumeId} 向量化完成`);
-  
+
     // 步骤4: 异步执行岗位匹配
     const matches = await getMatchedJobsForResume(resumeId);
     console.log(`✅ 简历 ${resumeId} 匹配完成，找到 ${matches.length} 个岗位`);
-    
+
     // 更新状态为已匹配
     await resumesModel.updateResumeStatus(resumeId, 'matched');
-    
+
     console.log(`🎉 简历 ${resumeId} 完全异步处理完成`);
   } catch (error) {
     console.error(`❌ 简历 ${tempResumeId} 完全异步处理失败:`, error);
-    
+
     // 根据错误类型更新状态（如果有真实resumeId）
     if (error instanceof BusinessError && error.code !== 'RESUME_NOT_FOUND') {
       // 这里需要根据实际情况处理错误状态更新
@@ -255,8 +273,8 @@ export async function createResumeAndMatchJobs(
   fileName: string,
   fileType?: string,
   fileSize?: number
-): Promise<{ 
-  resumeId: string; 
+): Promise<{
+  resumeId: string;
   parseResult?: Resume;
   vectorizeResult?: Resume;
   matches?: EnhancedMatch[];
@@ -265,21 +283,108 @@ export async function createResumeAndMatchJobs(
   // 步骤 1: 创建简历记录
   const resumeId = await uploadResume(userId, content, fileName, fileType, fileSize);
   const result = { resumeId };
-  
+
   try {
-    // 按照时序图流程，将解析、向量化和匹配操作委托给 ragService 处理
-    // 这样可以避免重复的解析和向量化操作
-    const processResult = await ragService.processResumeAndFindMatches(resumeId);
-    
-    // 更新结果对象
-    console.log("🚀 ~ processResult.matches:", processResult.matches)
-    return {
-      resumeId,
-      parseResult: processResult.resumeData as unknown as Resume,
-      vectorizeResult: processResult.resumeData as unknown as Resume,
-      matches: processResult.matches || [],
-      rawJobsData: processResult.rawJobsData || []
-    };
+    // 根据配置选择使用 V1 或 V2 版本的匹配服务
+    if (USE_V2_MATCHING) {
+      // V2 版本：使用增强的技能标准化和三阶段匹配流程
+      console.log('🚀 使用 V2 版本匹配服务处理简历:', resumeId);
+      const processResult = await ragServiceV2.processResumeAndFindMatchesV2(resumeId);
+
+      // 构建岗位ID到原始数据的映射
+      const rawJobsMap = new Map<string, Record<string, unknown>>();
+      (processResult.rawJobsData || []).forEach((job: Record<string, unknown>) => {
+        const jobId = String(job.topic_id || job.id || '');
+        if (jobId) {
+          rawJobsMap.set(jobId, job);
+        }
+      });
+
+      // 将 V2 的 MatchingResult 转换为兼容的格式，并补充完整岗位信息
+      const enhancedMatches: EnhancedMatch[] = processResult.matches.map(
+        (match: MatchingResult) => {
+          const jobId = match.id.replace('job_', '');
+          const rawJob = rawJobsMap.get(jobId);
+
+          return {
+            job: {
+              id: jobId,
+              title: match.metadata.title || (rawJob?.position_name as string) || '',
+              description: (rawJob?.content as string) || '',
+              companyName: match.metadata.company || (rawJob?.company as string) || '',
+              location: match.metadata.location || (rawJob?.location as string) || '',
+              // 补充更多岗位详细信息
+              requirements: (rawJob?.content2 as string) || '',
+              responsibilities: (rawJob?.content as string) || '',
+              benefits: (rawJob?.content3 as string) || '',
+              salaryRange:
+                rawJob?.min_salary && rawJob?.max_salary
+                  ? `${rawJob.min_salary}-${rawJob.max_salary}`
+                  : undefined,
+              level: (rawJob?.lever_name as string) || '',
+              companyIntroduction: (rawJob?.company_introduction as string) || '',
+              companyWebsite: (rawJob?.company_website as string) || '',
+              skills: match.metadata.normalized_skills || [],
+            },
+            matchDetails: {
+              score: match.score,
+              matchedSkills: match.matchedSkills,
+              missingSkills: match.missingSkills,
+              matchReasons: [
+                `技能匹配度: ${(match.skillMatchScore * 100).toFixed(0)}%`,
+                `向量相似度: ${(match.vectorScore * 100).toFixed(0)}%`,
+              ],
+              improvementSuggestions:
+                match.missingSkills.length > 0
+                  ? [`建议学习: ${match.missingSkills.join(', ')}`]
+                  : [],
+              salaryMatch: {
+                isMatch: match.salaryMatchScore >= 0.5,
+                matchScore: match.salaryMatchScore,
+                gap: 0,
+                gapPercentage: 0,
+                recommendation:
+                  match.salaryMatchScore >= 0.8
+                    ? ('perfect_match' as const)
+                    : match.salaryMatchScore >= 0.5
+                      ? ('acceptable' as const)
+                      : ('negotiable' as const),
+                details: match.salaryMatchScore >= 0.5 ? '薪资范围匹配' : '薪资范围可能不匹配',
+              },
+              scoreBreakdown: {
+                skillsScore: match.skillMatchScore * 100,
+                experienceScore: match.experienceMatchScore * 100,
+                educationScore: 0,
+                salaryScore: match.salaryMatchScore,
+                industryScore: 0,
+              },
+            },
+          };
+        }
+      );
+
+      console.log('🚀 V2 匹配结果:', enhancedMatches.length, '个岗位');
+      return {
+        resumeId,
+        parseResult: processResult.resumeData as unknown as Resume,
+        vectorizeResult: processResult.resumeData as unknown as Resume,
+        matches: enhancedMatches,
+        rawJobsData: processResult.rawJobsData || [],
+      };
+    } else {
+      // V1 版本：使用原有的匹配流程
+      const processResult = await ragService.processResumeAndFindMatches(resumeId);
+
+      // 更新结果对象
+      console.log('🚀 ~ processResult.matches:', processResult.matches);
+      return {
+        resumeId,
+        parseResult: processResult.resumeData as unknown as Resume,
+        vectorizeResult: processResult.resumeData as unknown as Resume,
+        matches: processResult.matches || [],
+        rawJobsData: processResult.rawJobsData || [],
+      };
+    }
   } catch (error) {
     console.error(`处理简历 ${resumeId} 失败:`, error);
     return result;
@@ -303,43 +408,137 @@ export async function getMatchedJobsForResume(
     experienceYears?: number;
   } = {}
 ): Promise<EnhancedMatch[]> {
-  // 生成缓存键，包含过滤条件
+  // 处理临时 ID：如果是临时 ID，先尝试获取真实 ID
+  let actualResumeId = resumeId;
+  if (resumeId.startsWith('temp_')) {
+    const realId = await getRealResumeIdAsync(resumeId);
+    if (!realId) {
+      throw new Error('简历正在处理中，请稍后再试');
+    }
+    actualResumeId = realId;
+    console.log(`✅ 临时ID ${resumeId} 转换为真实ID ${actualResumeId}`);
+  }
+
+  // 生成缓存键，包含过滤条件和版本标识
+  const versionSuffix = USE_V2_MATCHING ? ':v2' : ':v1';
   const filterString = JSON.stringify(filters);
-  const cacheKey = `resume:match:${resumeId}:${filterString}`;
-  
+  const cacheKey = `resume:match:${actualResumeId}:${filterString}${versionSuffix}`;
+
   // 1. 先查Redis缓存
   const cached = await redis.get(cacheKey);
   if (cached) {
-    console.log(`✅ 从缓存获取简历 ${resumeId} 的匹配岗位`);
+    console.log(
+      `✅ 从缓存获取简历 ${actualResumeId} 的匹配岗位 (${USE_V2_MATCHING ? 'V2' : 'V1'})`
+    );
     return JSON.parse(cached);
   }
 
   // 2. 没有缓存才调用 RAG服务 匹配岗位
   // 验证简历是否存在
-  const resume: Resume | null = await resumesModel.getResumeById(resumeId);
+  const resume: Resume | null = await resumesModel.getResumeById(actualResumeId);
   if (!resume) {
     throw new Error('简历不存在');
   }
-  
-  console.log(`🔍 为简历 ${resumeId} 查找匹配岗位`);
-  // 调用RAG服务查找匹配的岗位，默认返回最多10条结果
-  const topK = 10;
-  const matches = await ragService.findMatchingJobs(resumeId, topK, filters);
-  
-  // 确保返回的是岗位原始业务数据而非embedding数据
-  // 过滤掉不需要的向量数据，减小缓存体积
-  const cleanedMatches = matches.map(match => ({
-    ...match,
-    job: {
-      ...match.job,
-      vector: undefined, // 移除向量数据
-      embedding: undefined // 移除embedding数据
-    }
-  }));
+
+  console.log(
+    `🔍 为简历 ${actualResumeId} 查找匹配岗位 (使用 ${USE_V2_MATCHING ? 'V2' : 'V1'} 版本)`
+  );
+
+  let cleanedMatches: EnhancedMatch[];
+
+  if (USE_V2_MATCHING) {
+    // V2 版本：使用增强的技能标准化和三阶段匹配流程
+    const processResult = await ragServiceV2.processResumeAndFindMatchesV2(actualResumeId);
+
+    // 构建岗位ID到原始数据的映射
+    const rawJobsMap = new Map<string, Record<string, unknown>>();
+    processResult.rawJobsData.forEach((job: Record<string, unknown>) => {
+      const jobId = String(job.topic_id || job.id || '');
+      if (jobId) {
+        rawJobsMap.set(jobId, job);
+      }
+    });
+
+    // 将 V2 的 MatchingResult 转换为 EnhancedMatch 格式，并补充完整岗位信息
+    cleanedMatches = processResult.matches.map((match: MatchingResult) => {
+      const jobId = match.id.replace('job_', '');
+      const rawJob = rawJobsMap.get(jobId);
+
+      return {
+        job: {
+          id: jobId,
+          title: match.metadata.title || (rawJob?.position_name as string) || '',
+          description: (rawJob?.content as string) || '',
+          companyName: match.metadata.company || (rawJob?.company as string) || '',
+          location: match.metadata.location || (rawJob?.location as string) || '',
+          // 补充更多岗位详细信息
+          requirements: (rawJob?.content2 as string) || '',
+          responsibilities: (rawJob?.content as string) || '',
+          benefits: (rawJob?.content3 as string) || '',
+          salaryRange:
+            rawJob?.min_salary && rawJob?.max_salary
+              ? `${rawJob.min_salary}-${rawJob.max_salary}`
+              : undefined,
+          level: (rawJob?.lever_name as string) || '',
+          companyIntroduction: (rawJob?.company_introduction as string) || '',
+          companyWebsite: (rawJob?.company_website as string) || '',
+          skills: match.metadata.normalized_skills || [],
+        },
+        matchDetails: {
+          score: match.score,
+          matchedSkills: match.matchedSkills,
+          missingSkills: match.missingSkills,
+          matchReasons: [
+            `技能匹配度: ${(match.skillMatchScore * 100).toFixed(0)}%`,
+            `向量相似度: ${(match.vectorScore * 100).toFixed(0)}%`,
+          ],
+          improvementSuggestions:
+            match.missingSkills.length > 0 ? [`建议学习: ${match.missingSkills.join(', ')}`] : [],
+          salaryMatch: {
+            isMatch: match.salaryMatchScore >= 0.5,
+            matchScore: match.salaryMatchScore,
+            gap: 0,
+            gapPercentage: 0,
+            recommendation:
+              match.salaryMatchScore >= 0.8
+                ? ('perfect_match' as const)
+                : match.salaryMatchScore >= 0.5
+                  ? ('acceptable' as const)
+                  : ('negotiable' as const),
+            details: match.salaryMatchScore >= 0.5 ? '薪资范围匹配' : '薪资范围可能不匹配',
+          },
+          scoreBreakdown: {
+            skillsScore: match.skillMatchScore * 100,
+            experienceScore: match.experienceMatchScore * 100,
+            educationScore: 0, // V2 暂不提供学历匹配分数
+            salaryScore: match.salaryMatchScore,
+            industryScore: 0, // V2 暂不提供行业匹配分数
+          },
+        },
+      };
+    });
+  } else {
+    // V1 版本：使用原有的匹配流程
+    const topK = 10;
+    const matches = await ragService.findMatchingJobs(actualResumeId, topK, filters);
+
+    // 确保返回的是岗位原始业务数据而非embedding数据
+    // 过滤掉不需要的向量数据，减小缓存体积
+    cleanedMatches = matches.map(match => ({
+      ...match,
+      job: {
+        ...match.job,
+        vector: undefined, // 移除向量数据
+        embedding: undefined, // 移除embedding数据
+      },
+    }));
+  }
 
   // 3. 写入Redis缓存，设置过期时间（1小时）
   await redis.set(cacheKey, JSON.stringify(cleanedMatches), 'EX', 3600);
-  console.log(`💾 缓存简历 ${resumeId} 的匹配岗位结果，有效期1小时`);
+  console.log(
+    `💾 缓存简历 ${actualResumeId} 的匹配岗位结果，有效期1小时 (${USE_V2_MATCHING ? 'V2' : 'V1'})`
+  );
 
   return cleanedMatches;
 }
@@ -403,7 +602,7 @@ export async function getResumeProgress(resumeId: string): Promise<{
   jobs?: any[];
 }> {
   console.log(`🔍 获取简历 ${resumeId} 的处理进度`);
-  
+
   // 如果是临时ID，需要特殊处理
   if (resumeId.startsWith('temp_')) {
     // 使用异步方法获取真实ID
@@ -413,7 +612,7 @@ export async function getResumeProgress(resumeId: string): Promise<{
       console.log(`⏳ 临时ID ${resumeId} 尚未关联到真实ID，返回初始进度`);
       return {
         progress: 10, // 临时ID表示刚开始处理
-        status: 'processing'
+        status: 'processing',
       };
     }
     console.log(`✅ 临时ID ${resumeId} 已关联到真实ID ${realId}，递归查询进度`);
@@ -464,11 +663,11 @@ export async function getResumeProgress(resumeId: string): Promise<{
   if (status === 'done') {
     try {
       console.log(`🔍 简历 ${resumeId} 已处理完成，获取匹配岗位`);
-      
+
       // 先尝试从缓存获取匹配结果
       const cacheKey = `resume:match:${resumeId}:{}`;
       const cached = await redis.get(cacheKey);
-      
+
       if (cached) {
         console.log(`✅ 从缓存获取简历 ${resumeId} 的匹配岗位`);
         jobs = JSON.parse(cached);
@@ -477,7 +676,7 @@ export async function getResumeProgress(resumeId: string): Promise<{
         console.log(`🔄 缓存未命中，重新获取简历 ${resumeId} 的匹配岗位`);
         jobs = await getMatchedJobsForResume(resumeId);
       }
-      
+
       console.log(`✅ 简历 ${resumeId} 匹配到 ${jobs.length} 个岗位`);
     } catch (error) {
       console.error(`❌ 获取简历 ${resumeId} 匹配岗位失败:`, error);
@@ -488,6 +687,6 @@ export async function getResumeProgress(resumeId: string): Promise<{
   return {
     progress,
     status,
-    jobs: status === 'done' ? jobs : undefined
+    jobs: status === 'done' ? jobs : undefined,
   };
-} 
+}

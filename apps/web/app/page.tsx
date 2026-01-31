@@ -36,11 +36,9 @@ export default function Home() {
   const isLoading = status === 'loading';
   const isAuthenticated = !!session;
 
-  function getRandomSlice<T>(arr: T[]): T[] {
-    const randomNum = Math.floor(Math.random() * 10) + 1;
-    const endIndex = Math.min(randomNum, arr.length);
-
-    return arr.slice(0, endIndex);
+  // 不再随机截取，直接返回所有岗位
+  function getAllJobs<T>(arr: T[]): T[] {
+    return arr;
   }
 
   // 轮询后端进度接口，混合进度条方案
@@ -84,7 +82,7 @@ export default function Home() {
 
             // 获取岗位数据
             if (jobs && Array.isArray(jobs) && jobs.length > 0) {
-              setMatchedJobsAtom(getRandomSlice(jobs)); // 存到全局
+              setMatchedJobsAtom(getAllJobs(jobs)); // 存到全局
               setCurrentResumeId(resumeId); // 保存简历ID到全局
             } else {
               // 兜底再拉一次岗位
@@ -94,7 +92,7 @@ export default function Home() {
                   if (matchedJobsData && matchedJobsData.length > 0) {
                     progressManager.complete(100);
                     setIsLoading(false);
-                    setMatchedJobsAtom(getRandomSlice(matchedJobsData));
+                    setMatchedJobsAtom(getAllJobs(matchedJobsData));
                     setCurrentResumeId(resumeId);
                   }
                   fallbackCountRef.current += 1;
@@ -118,7 +116,7 @@ export default function Home() {
               if (matchedJobsData && matchedJobsData.length > 0) {
                 progressManager.complete(100);
                 setIsLoading(false);
-                setMatchedJobsAtom(getRandomSlice(matchedJobsData));
+                setMatchedJobsAtom(getAllJobs(matchedJobsData));
                 setCurrentResumeId(resumeId);
               }
               fallbackCountRef.current += 1;
