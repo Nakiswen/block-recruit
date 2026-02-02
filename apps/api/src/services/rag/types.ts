@@ -26,7 +26,7 @@ export interface SearchOptions {
  */
 export interface Match {
   id: string;
-  score: number | undefined;  // 分数可能为undefined
+  score: number | undefined; // 分数可能为undefined
   metadata: Record<string, any>;
 }
 
@@ -61,7 +61,7 @@ export interface PineconeConfig {
  */
 export enum PineconeIndexType {
   JOB = 'job',
-  RESUME = 'resume'
+  RESUME = 'resume',
 }
 
 /**
@@ -94,7 +94,6 @@ export interface EmbeddingServiceConfig {
   dimensions: number;
 }
 
-
 // 定义模型类型
 export type Job = {
   id: string;
@@ -102,7 +101,7 @@ export type Job = {
   description: string;
   companyName?: string; // 可能不存在，添加可选标志
   salaryRange?: string; // 可能不存在，添加可选标志
-  location?: string;    // 可能不存在，添加可选标志
+  location?: string; // 可能不存在，添加可选标志
   responsibilities?: string;
   requirements?: string;
   skills?: string[];
@@ -111,7 +110,7 @@ export type Job = {
   educationLevel?: string;
   level?: string;
   salaryBenefits?: string; // 薪资福利描述
-  benefits?: string;       // 福利待遇
+  benefits?: string; // 福利待遇
   companyIntroduction?: string; // 公司介绍
   companyWebsite?: string; // 公司网站
 };
@@ -168,3 +167,125 @@ export interface ResumeVector {
   vector: number[];
   metadata: Record<string, any>;
 }
+
+// ========== V2 统一类型定义 ==========
+
+import { SkillCategory } from './skillNormalizer.js';
+
+/**
+ * 岗位类型枚举
+ */
+export enum JobType {
+  TECHNICAL = 'technical',
+  PRODUCT = 'product',
+  OPERATION = 'operation',
+  MARKETING = 'marketing',
+  DESIGN = 'design',
+  RESEARCH = 'research',
+  BUSINESS = 'business',
+  OTHER = 'other',
+}
+
+/**
+ * 统一标签结构 - 简历和岗位共用
+ */
+export interface UnifiedTags {
+  normalizedSkills: string[]; // 标准化后的技能列表
+  skillCategories: SkillCategory[]; // 技能分类列表
+  experienceYears: number; // 经验年限
+  educationLevel: string; // 学历
+  jobType: JobType; // 岗位类型
+  location: string; // 地点
+  industry: string[]; // 行业
+}
+
+/**
+ * 统一的 Pinecone Metadata 结构
+ * 简历和岗位使用相同的字段名
+ */
+export interface UnifiedMetadata {
+  id: string; // 实体ID
+  type: 'resume' | 'job'; // 类型标识
+  normalized_skills: string[]; // 标准化技能（统一字段名）
+  skill_categories: string[]; // 技能分类
+  experience_years: number; // 经验年限
+  education_level: string; // 学历
+  job_type: string; // 岗位类型
+  location: string; // 地点
+  industry: string[]; // 行业
+  update_time: string; // 更新时间
+
+  // 简历特有字段
+  owner?: string; // 简历所有者ID
+  expected_salary_min?: number; // 期望薪资下限
+  expected_salary_max?: number; // 期望薪资上限
+
+  // 岗位特有字段
+  company?: string; // 公司名称
+  title?: string; // 岗位标题
+  required_skills?: string[]; // 必须技能（原始描述）
+  preferred_skills?: string[]; // 加分技能（原始描述）
+  parsed_required_skills?: string[]; // 解析后的必须技能（具体技能词）
+  parsed_preferred_skills?: string[]; // 解析后的加分技能（具体技能词）
+  salary_min?: number; // 薪资下限
+  salary_max?: number; // 薪资上限
+  job_level?: string; // 岗位级别
+}
+
+/**
+ * 匹配配置
+ */
+export interface MatchingConfig {
+  hardFilterEnabled: boolean; // 是否启用硬性过滤
+  vectorRecallTopK: number; // 向量召回数量
+  finalTopK: number; // 最终返回数量
+  minVectorScore: number; // 最低向量相似度
+  relaxFilterOnEmpty: boolean; // 空结果时是否放宽过滤
+  weights: {
+    skillMatch: number; // 技能匹配权重
+    vectorSimilarity: number; // 向量相似度权重
+    experienceMatch: number; // 经验匹配权重
+    salaryMatch: number; // 薪资匹配权重
+    jobTypeMatch: number; // 岗位类型匹配权重
+  };
+}
+
+/**
+ * 匹配结果
+ */
+export interface MatchingResult {
+  id: string;
+  score: number; // 综合得分
+  vectorScore: number; // 向量相似度
+  skillMatchScore: number; // 技能匹配度
+  experienceMatchScore: number; // 经验匹配度
+  salaryMatchScore: number; // 薪资匹配度
+  jobTypeMatchScore: number; // 岗位类型匹配度
+  matchedSkills: string[]; // 匹配的技能
+  missingSkills: string[]; // 缺失的技能
+  metadata: UnifiedMetadata;
+}
+
+/**
+ * 默认匹配配置
+ * 权重分配说明：
+ * - skillMatch (0.35): 技能匹配最重要
+ * - jobTypeMatch (0.25): 岗位类型匹配很重要，开发不应该匹配产品岗
+ * - vectorSimilarity (0.20): 语义相似度
+ * - experienceMatch (0.12): 经验匹配
+ * - salaryMatch (0.08): 薪资匹配权重较低
+ */
+export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
+  hardFilterEnabled: true,
+  vectorRecallTopK: 50,
+  finalTopK: 10,
+  minVectorScore: 0.6,
+  relaxFilterOnEmpty: true,
+  weights: {
+    skillMatch: 0.35,
+    jobTypeMatch: 0.25,
+    vectorSimilarity: 0.2,
+    experienceMatch: 0.12,
+    salaryMatch: 0.08,
+  },
+};

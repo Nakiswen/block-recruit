@@ -3,6 +3,15 @@ import { Job, Resume } from '@/services/rag/types';
 import { StructuredOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
 import { z } from 'zod';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
+
+// 配置全局代理 (如果设置了 HTTPS_PROXY 或 HTTP_PROXY 环境变量)
+const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+if (proxyUrl) {
+  console.log('🌐 设置全局代理:', proxyUrl);
+  const proxyAgent = new ProxyAgent(proxyUrl);
+  setGlobalDispatcher(proxyAgent);
+}
 
 /**
  * AI服务配置
@@ -41,9 +50,12 @@ interface AIService {
    * 对已经提取结构化数据的简历和岗位进行增强匹配分析
    * @param resumeInfo 已提取的简历结构化数据
    * @param jobInfo 已提取的岗位结构化数据
-   * @returns 完整的匹配分析结果 
+   * @returns 完整的匹配分析结果
    */
-  enhanceMatchingWithExtractedInfo(resumeInfo: ResumeStructuredInfo, jobInfo: JobStructuredInfo): Promise<MatchResult>;
+  enhanceMatchingWithExtractedInfo(
+    resumeInfo: ResumeStructuredInfo,
+    jobInfo: JobStructuredInfo
+  ): Promise<MatchResult>;
 }
 /**
  * 薪资范围接口
@@ -142,11 +154,20 @@ class LangChainAIService implements AIService {
       );
     }
     this.config = config;
+    // 设置环境变量以确保 OpenAI SDK 使用正确的 baseURL
+    process.env.OPENAI_BASE_URL = config.baseUrl || 'https://openrouter.ai/api/v1';
+
+    console.log('🚀 ~ LangChainAIService ~ constructor ~ config.apiKey:', config.apiKey);
+    console.log(
+      "🚀 ~ LangChainAIService ~ constructor ~ config.baseUrl || 'https://openrouter.ai/api/v1':",
+      config.baseUrl || 'https://openrouter.ai/api/v1'
+    );
+
     this.model = new ChatOpenAI({
       modelName: config.model,
       temperature: 0.1,
       openAIApiKey: config.apiKey,
-      maxTokens: 1000,
+      maxTokens: 4000,
       configuration: {
         baseURL: config.baseUrl || 'https://openrouter.ai/api/v1',
         defaultHeaders: {
@@ -241,7 +262,9 @@ class LangChainAIService implements AIService {
       const response = await this.model.invoke(formattedPrompt);
       const content =
         typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-      const result = await parser.parse(content);
+      // 清理可能存在的 markdown 代码块标记
+      const cleanedContent = this.cleanMarkdownCodeBlock(content);
+      const result = await parser.parse(cleanedContent);
 
       return this.normalizeJobInfo(result);
     } catch (error) {
@@ -254,7 +277,6 @@ class LangChainAIService implements AIService {
    * 从简历中提取结构化信息 - 调试增强版
    */
   async extractResumeInfo(resume: Resume): Promise<ResumeStructuredInfo> {
-
     console.log('🔍 开始提取简历信息:', {
       resumeId: resume.id,
       hasName: !!resume.name,
@@ -262,7 +284,7 @@ class LangChainAIService implements AIService {
       hasWorkExperience: !!resume.workExperience,
       hasEducation: !!resume.education,
       hasSkills: !!resume.skills,
-      resumeData: resume
+      resumeData: resume,
     });
 
     try {
@@ -348,14 +370,16 @@ ${resume.content}
       });
 
       const response = await this.model.invoke(formattedPrompt);
-      
+
       const content =
         typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-      
-      const result = await parser.parse(content);
+      // 清理可能存在的 markdown 代码块标记
+      const cleanedContent = this.cleanMarkdownCodeBlock(content);
+
+      const result = await parser.parse(cleanedContent);
 
       const normalizedResult = this.normalizeResumeInfo(result);
-      
+
       console.log('🔄 规范化后的结果:', normalizedResult);
 
       return normalizedResult;
@@ -363,9 +387,9 @@ ${resume.content}
       console.error('❌ 提取简历信息失败:', {
         error: error,
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
-      
+
       // 返回默认值而不是抛出错误，这样可以查看是否是这里导致的空数据
       return {
         skills: [],
@@ -591,7 +615,9 @@ ${resume.content}
       const response = await this.model.invoke(formattedPrompt);
       const content =
         typeof response.content === 'string' ? response.content : JSON.stringify(response.content);
-      const aiResult = await parser.parse(content);
+      // 清理可能存在的 markdown 代码块标记
+      const cleanedContent = this.cleanMarkdownCodeBlock(content);
+      const aiResult = await parser.parse(cleanedContent);
 
       // 组合最终结果
       return {
@@ -629,10 +655,12 @@ ${resume.content}
     try {
       // 检查简历对象中是否已有解析好的结构化数据
       let resumeInfo: ResumeStructuredInfo;
-      if (resume.parsedData && 
-          typeof resume.parsedData === 'object' && 
-          'skills' in resume.parsedData && 
-          'educationLevel' in resume.parsedData) {
+      if (
+        resume.parsedData &&
+        typeof resume.parsedData === 'object' &&
+        'skills' in resume.parsedData &&
+        'educationLevel' in resume.parsedData
+      ) {
         resumeInfo = resume.parsedData as unknown as ResumeStructuredInfo;
       } else {
         // 如果没有结构化数据，才调用AI进行解析
@@ -660,9 +688,12 @@ ${resume.content}
    * 对已经提取结构化数据的简历和岗位进行增强匹配分析
    * @param resumeInfo 已提取的简历结构化数据
    * @param jobInfo 已提取的岗位结构化数据
-   * @returns 完整的匹配分析结果 
+   * @returns 完整的匹配分析结果
    */
-  async enhanceMatchingWithExtractedInfo(resumeInfo: ResumeStructuredInfo, jobInfo: JobStructuredInfo): Promise<MatchResult> {
+  async enhanceMatchingWithExtractedInfo(
+    resumeInfo: ResumeStructuredInfo,
+    jobInfo: JobStructuredInfo
+  ): Promise<MatchResult> {
     try {
       // 使用提取出的结构化信息计算匹配分数和详细分析
       const matchResult = await this.calculateMatchScore(resumeInfo, jobInfo);
@@ -671,9 +702,7 @@ ${resume.content}
     } catch (error) {
       console.error(`为简历和岗位进行增强匹配失败:`, error);
       // 在遇到错误时，将错误包装后重新抛出，以便上层服务能够捕获和处理
-      throw new Error(
-        `Failed to enhance match for resume and job: ${(error as Error).message}`
-      );
+      throw new Error(`Failed to enhance match for resume and job: ${(error as Error).message}`);
     }
   }
 
@@ -695,7 +724,7 @@ ${resume.content}
       jobLevel: this.normalizeJobLevel(jobInfo.jobLevel),
       keyResponsibilities: jobInfo.keyResponsibilities || [],
       benefits: jobInfo.benefits || [],
-      salaryNegotiable: jobInfo.salaryNegotiable || false
+      salaryNegotiable: jobInfo.salaryNegotiable || false,
     };
   }
 
@@ -774,12 +803,136 @@ ${resume.content}
 
     return level.trim();
   }
+
+  /**
+   * 清理 AI 响应中的 markdown 代码块标记
+   * @param content AI 返回的原始内容
+   * @returns 清理后的 JSON 字符串
+   */
+  private cleanMarkdownCodeBlock(content: string): string {
+    // 移除开头的 ```json 或 ``` 标记
+    let cleaned = content.trim();
+
+    // 匹配并移除开头的代码块标记
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.substring(7);
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3);
+    }
+
+    // 移除结尾的 ``` 标记
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3);
+    }
+
+    cleaned = cleaned.trim();
+
+    // 尝试修复不完整的 JSON
+    cleaned = this.tryFixIncompleteJson(cleaned);
+
+    return cleaned;
+  }
+
+  /**
+   * 尝试修复不完整的 JSON 字符串
+   * @param json 可能不完整的 JSON 字符串
+   * @returns 修复后的 JSON 字符串
+   */
+  private tryFixIncompleteJson(json: string): string {
+    // 先尝试直接解析，如果成功就不需要修复
+    try {
+      JSON.parse(json);
+      return json;
+    } catch {
+      // 需要修复
+    }
+
+    let fixed = json;
+
+    // 计算未闭合的括号数量
+    let openBraces = 0;
+    let openBrackets = 0;
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < fixed.length; i++) {
+      const char = fixed[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') openBraces++;
+        else if (char === '}') openBraces--;
+        else if (char === '[') openBrackets++;
+        else if (char === ']') openBrackets--;
+      }
+    }
+
+    // 如果在字符串中结束，先闭合字符串
+    if (inString) {
+      fixed += '"';
+    }
+
+    // 添加缺失的闭合括号
+    for (let i = 0; i < openBrackets; i++) {
+      fixed += ']';
+    }
+    for (let i = 0; i < openBraces; i++) {
+      fixed += '}';
+    }
+
+    // 再次尝试解析
+    try {
+      JSON.parse(fixed);
+      console.log('✅ JSON 修复成功');
+      return fixed;
+    } catch (e) {
+      // 如果还是失败，尝试更激进的修复
+      console.warn('⚠️ JSON 修复失败，尝试更激进的修复方法');
+
+      // 尝试找到最后一个完整的属性，截断后面的内容
+      const lastCompleteMatch = fixed.match(
+        /^([\s\S]*"[^"]+"\s*:\s*(?:"[^"]*"|[\d.]+|true|false|null|\[[^\]]*\]|\{[^}]*\}))\s*,?\s*"[^"]*$/
+      );
+      if (lastCompleteMatch) {
+        fixed = lastCompleteMatch[1];
+        // 重新计算并添加闭合括号
+        openBraces = (fixed.match(/{/g) || []).length - (fixed.match(/}/g) || []).length;
+        openBrackets = (fixed.match(/\[/g) || []).length - (fixed.match(/]/g) || []).length;
+        for (let i = 0; i < openBrackets; i++) fixed += ']';
+        for (let i = 0; i < openBraces; i++) fixed += '}';
+      }
+
+      try {
+        JSON.parse(fixed);
+        console.log('✅ JSON 激进修复成功');
+        return fixed;
+      } catch {
+        // 返回原始内容，让上层处理错误
+        console.error('❌ JSON 修复失败，返回原始内容');
+        return json;
+      }
+    }
+  }
 }
 
 // 从环境变量获取配置
 const config: AIServiceConfig = {
   apiKey: process.env.OPENROUTER_API_KEY || '',
-  model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4',
+  model: process.env.AI_MODEL || 'anthropic/claude-sonnet-4.5',
   baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1',
 };
 

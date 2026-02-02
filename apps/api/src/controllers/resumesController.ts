@@ -31,7 +31,9 @@ async function extractTextFromFile(file: File): Promise<string> {
           const pdfjs = await import('pdfjs-dist');
 
           // 创建文档加载任务
-          const loadingTask = pdfjs.getDocument({ data: file.buffer });
+          // 将 Buffer 转换为 Uint8Array，因为新版本 pdfjs-dist 需要 Uint8Array
+          const uint8Array = new Uint8Array(file.buffer);
+          const loadingTask = pdfjs.getDocument({ data: uint8Array });
           const pdfDoc = await loadingTask.promise;
           let text = '';
 
