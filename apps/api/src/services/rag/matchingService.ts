@@ -264,11 +264,17 @@ export class MatchingService implements IMatchingService {
           jobNormalizedSkills
         );
 
-      // 计算岗位类型匹配度
-      const jobTypeMatchScore = this.calculateJobTypeMatch(sourceData.jobType, metadata.job_type);
+      // 计算岗位类型匹配度（传入标题用于推断）
+      const jobTypeMatchScore = this.calculateJobTypeMatch(
+        sourceData.jobType,
+        metadata.job_type,
+        metadata.title
+      );
 
+      // 获取推断的岗位类型用于日志
+      const inferredJobType = metadata.job_type || this.inferJobTypeFromTitle(metadata.title || '');
       console.log(
-        `   技能匹配分: ${skillMatchScore.toFixed(3)}, 岗位类型匹配分: ${jobTypeMatchScore.toFixed(3)}`
+        `   技能匹配分: ${skillMatchScore.toFixed(3)}, 岗位类型匹配分: ${jobTypeMatchScore.toFixed(3)} (推断: ${inferredJobType})`
       );
       console.log(
         `   匹配技能: ${matchedSkills.length}个 [${matchedSkills.slice(0, 5).join(', ')}]`
@@ -323,9 +329,16 @@ export class MatchingService implements IMatchingService {
    * 计算岗位类型匹配度
    * 相同类型得满分，相近类型得部分分，完全不同得低分
    */
-  private calculateJobTypeMatch(resumeJobType: string, jobJobType: string): number {
+  private calculateJobTypeMatch(
+    resumeJobType: string,
+    jobJobType: string | undefined,
+    jobTitle?: string
+  ): number {
+    // 如果岗位没有 job_type，根据标题推断
+    const inferredJobType = jobJobType || this.inferJobTypeFromTitle(jobTitle || '');
+
     // 如果完全匹配，得满分
-    if (resumeJobType === jobJobType) {
+    if (resumeJobType === inferredJobType) {
       return 1.0;
     }
 
@@ -342,13 +355,143 @@ export class MatchingService implements IMatchingService {
 
     // 如果是相近类型，得部分分
     const related = relatedTypes[resumeJobType] || [];
-    if (related.includes(jobJobType)) {
+    if (related.includes(inferredJobType)) {
       return 0.5;
     }
 
     // 完全不同的类型，得很低的分
-    // 比如开发去匹配产品岗，应该得很低的分
     return 0.1;
+  }
+
+  /**
+   * 根据岗位标题推断岗位类型
+   */
+  private inferJobTypeFromTitle(title: string): string {
+    const lowerTitle = title.toLowerCase();
+
+    // 技术类关键词
+    const technicalKeywords = [
+      'engineer',
+      'developer',
+      'dev',
+      'architect',
+      'programmer',
+      'backend',
+      'frontend',
+      'fullstack',
+      'full-stack',
+      'software',
+      'devops',
+      'sre',
+      'infrastructure',
+      'blockchain',
+      'smart contract',
+      'solidity',
+      'rust',
+      'golang',
+      'python',
+      'technical lead',
+      'tech lead',
+      'engineering',
+      '工程师',
+      '开发',
+      '架构师',
+      '程序员',
+      '后端',
+      '前端',
+      '全栈',
+      '技术负责人',
+    ];
+
+    // 产品类关键词
+    const productKeywords = [
+      'product',
+      'pm',
+      'product manager',
+      'product lead',
+      'product owner',
+      '产品',
+      '产品经理',
+      '产品负责人',
+    ];
+
+    // 运营类关键词
+    const operationKeywords = [
+      'operation',
+      'community',
+      'growth',
+      'user',
+      'content',
+      '运营',
+      '社区',
+      '增长',
+      '用户',
+    ];
+
+    // 市场类关键词
+    const marketingKeywords = [
+      'marketing',
+      'brand',
+      'pr',
+      'public relation',
+      'media',
+      '市场',
+      '品牌',
+      '公关',
+      '媒体',
+    ];
+
+    // 设计类关键词
+    const designKeywords = [
+      'design',
+      'designer',
+      'ui',
+      'ux',
+      'graphic',
+      'visual',
+      '设计',
+      '设计师',
+      '视觉',
+    ];
+
+    // 研究类关键词
+    const researchKeywords = [
+      'research',
+      'researcher',
+      'analyst',
+      'data scientist',
+      'ml',
+      'ai',
+      '研究',
+      '研究员',
+      '分析师',
+      '数据科学',
+    ];
+
+    // 商务类关键词
+    const businessKeywords = [
+      'business',
+      'bd',
+      'sales',
+      'account',
+      'partnership',
+      'listing',
+      '商务',
+      '销售',
+      '客户',
+      '合作',
+    ];
+
+    // 按优先级检查
+    if (technicalKeywords.some(k => lowerTitle.includes(k))) return 'technical';
+    if (productKeywords.some(k => lowerTitle.includes(k))) return 'product';
+    if (designKeywords.some(k => lowerTitle.includes(k))) return 'design';
+    if (researchKeywords.some(k => lowerTitle.includes(k))) return 'research';
+    if (operationKeywords.some(k => lowerTitle.includes(k))) return 'operation';
+    if (marketingKeywords.some(k => lowerTitle.includes(k))) return 'marketing';
+    if (businessKeywords.some(k => lowerTitle.includes(k))) return 'business';
+
+    return 'other';
   }
 
   /**
