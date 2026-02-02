@@ -1,6 +1,6 @@
 /**
  * 匹配服务
- * 实现硬性过滤 + 向量召回 + 标签精排的完整匹配流程
+ * 实现结构化过滤 → 向量召回 → 技能精确匹配精排 → 向量语义补充的完整匹配流程
  */
 
 import {
@@ -8,11 +8,19 @@ import {
   UnifiedMetadata,
   MatchingConfig,
   MatchingResult,
-  DEFAULT_MATCHING_CONFIG,
+  EnhancedMatchingConfig,
+  EnhancedMatchingResult,
+  DEFAULT_ENHANCED_MATCHING_CONFIG,
   PineconeIndexType,
 } from './types.js';
 import { PineconeClient } from './pineconeClient.js';
-import { skillNormalizer } from './skillNormalizer.js';
+import {
+  structuredFilterBuilder,
+  FilterStrictness,
+  PineconeFilter,
+  RELATED_JOB_TYPES,
+} from './structuredFilterBuilder.js';
+import { skillMatcher } from './skillMatcher.js';
 
 /**
  * 匹配服务接口
@@ -45,226 +53,259 @@ export interface IMatchingService {
  */
 export class MatchingService implements IMatchingService {
   /**
-   * 为简历查找匹配的岗位
+   * 为简历查找匹配的岗位（增强版）
+   * 流程：结构化过滤 → 向量召回 → 技能精确匹配精排 → 语义补充
    */
   async findMatchingJobsForResume(
     resumeData: UnifiedTags,
     resumeVector: number[],
-    config?: Partial<MatchingConfig>
-  ): Promise<MatchingResult[]> {
-    const mergedConfig = { ...DEFAULT_MATCHING_CONFIG, ...config };
+    config?: Partial<EnhancedMatchingConfig>
+  ): Promise<EnhancedMatchingResult[]> {
+    const mergedConfig = { ...DEFAULT_ENHANCED_MATCHING_CONFIG, ...config };
 
-    // 阶段1: 构建硬性过滤条件
-    let filters: Record<string, unknown> = {};
-    if (mergedConfig.hardFilterEnabled) {
-      filters = this.buildHardFilters(resumeData, 'job');
+    // 阶段1: 构建结构化过滤条件
+    let filters: PineconeFilter = {};
+    let relaxLevel = 0;
+    let filterRelaxed = false;
+
+    if (mergedConfig.structuredFilterEnabled) {
+      filters = structuredFilterBuilder.buildFilters(resumeData, 'job', FilterStrictness.STRICT);
+      console.log('📋 [结构化过滤] 初始过滤条件:', JSON.stringify(filters));
     }
 
-    // 阶段2: 向量召回
-    let searchResult = await PineconeClient.search({
-      vector: resumeVector,
-      topK: mergedConfig.vectorRecallTopK,
-      indexType: PineconeIndexType.JOB,
-      filter: Object.keys(filters).length > 0 ? filters : undefined,
-      includeMetadata: true,
-    });
+    // 阶段2: 向量召回（带渐进放宽）
+    const searchResult = await this.searchWithProgressiveRelax(
+      resumeVector,
+      PineconeIndexType.JOB,
+      filters,
+      resumeData,
+      mergedConfig
+    );
 
-    // 如果硬性过滤结果为空，尝试放宽条件
-    if (
-      mergedConfig.relaxFilterOnEmpty &&
-      searchResult.matches.length === 0 &&
-      Object.keys(filters).length > 0
-    ) {
-      console.log('硬性过滤结果为空，尝试放宽条件...');
-      const relaxedFilters = this.relaxFilters(filters, resumeData);
-
-      searchResult = await PineconeClient.search({
-        vector: resumeVector,
-        topK: mergedConfig.vectorRecallTopK,
-        indexType: PineconeIndexType.JOB,
-        filter: Object.keys(relaxedFilters).length > 0 ? relaxedFilters : undefined,
-        includeMetadata: true,
-      });
-    }
+    relaxLevel = searchResult.relaxLevel;
+    filterRelaxed = relaxLevel > 0;
 
     if (!searchResult.success || searchResult.matches.length === 0) {
+      console.log('⚠️ [匹配] 未找到匹配结果');
       return [];
     }
+
+    console.log(
+      `✅ [向量召回] 找到 ${searchResult.matches.length} 个候选，放宽级别: ${relaxLevel}`
+    );
 
     // 过滤低分结果
     const filteredMatches = searchResult.matches.filter(
       m => m.score >= mergedConfig.minVectorScore
     );
 
-    // 阶段3: 标签精排
+    // 阶段3: 技能精确匹配精排 + 语义补充
     const candidates = filteredMatches.map(m => ({
       id: m.id,
       score: m.score,
-      metadata: m.metadata as UnifiedMetadata,
+      metadata: m.metadata as unknown as UnifiedMetadata,
     }));
 
-    // 从岗位 metadata 中提取必须技能
-    const results = this.rerankByTags(candidates, resumeData, [], mergedConfig);
+    const results = this.rerankWithSemanticSupplement(
+      candidates,
+      resumeData,
+      mergedConfig,
+      filterRelaxed,
+      relaxLevel
+    );
 
     // 返回 topK 结果
     return results.slice(0, mergedConfig.finalTopK);
   }
 
   /**
-   * 为岗位查找匹配的简历
+   * 为岗位查找匹配的简历（增强版）
    */
   async findMatchingResumesForJob(
     jobData: UnifiedTags & { requiredSkills: string[] },
     jobVector: number[],
-    config?: Partial<MatchingConfig>
-  ): Promise<MatchingResult[]> {
-    const mergedConfig = { ...DEFAULT_MATCHING_CONFIG, ...config };
+    config?: Partial<EnhancedMatchingConfig>
+  ): Promise<EnhancedMatchingResult[]> {
+    const mergedConfig = { ...DEFAULT_ENHANCED_MATCHING_CONFIG, ...config };
 
-    // 阶段1: 构建硬性过滤条件
-    let filters: Record<string, unknown> = {};
-    if (mergedConfig.hardFilterEnabled) {
-      filters = this.buildHardFilters(jobData, 'resume');
+    // 阶段1: 构建结构化过滤条件
+    let filters: PineconeFilter = {};
+    let relaxLevel = 0;
+    let filterRelaxed = false;
+
+    if (mergedConfig.structuredFilterEnabled) {
+      filters = structuredFilterBuilder.buildFilters(jobData, 'resume', FilterStrictness.STRICT);
+      console.log('📋 [结构化过滤] 初始过滤条件:', JSON.stringify(filters));
     }
 
-    // 阶段2: 向量召回
-    let searchResult = await PineconeClient.search({
-      vector: jobVector,
-      topK: mergedConfig.vectorRecallTopK,
-      indexType: PineconeIndexType.RESUME,
-      filter: Object.keys(filters).length > 0 ? filters : undefined,
-      includeMetadata: true,
-    });
+    // 阶段2: 向量召回（带渐进放宽）
+    const searchResult = await this.searchWithProgressiveRelax(
+      jobVector,
+      PineconeIndexType.RESUME,
+      filters,
+      jobData,
+      mergedConfig
+    );
 
-    // 如果硬性过滤结果为空，尝试放宽条件
-    if (
-      mergedConfig.relaxFilterOnEmpty &&
-      searchResult.matches.length === 0 &&
-      Object.keys(filters).length > 0
-    ) {
-      console.log('硬性过滤结果为空，尝试放宽条件...');
-      const relaxedFilters = this.relaxFilters(filters, jobData);
-
-      searchResult = await PineconeClient.search({
-        vector: jobVector,
-        topK: mergedConfig.vectorRecallTopK,
-        indexType: PineconeIndexType.RESUME,
-        filter: Object.keys(relaxedFilters).length > 0 ? relaxedFilters : undefined,
-        includeMetadata: true,
-      });
-    }
+    relaxLevel = searchResult.relaxLevel;
+    filterRelaxed = relaxLevel > 0;
 
     if (!searchResult.success || searchResult.matches.length === 0) {
+      console.log('⚠️ [匹配] 未找到匹配结果');
       return [];
     }
+
+    console.log(
+      `✅ [向量召回] 找到 ${searchResult.matches.length} 个候选，放宽级别: ${relaxLevel}`
+    );
 
     // 过滤低分结果
     const filteredMatches = searchResult.matches.filter(
       m => m.score >= mergedConfig.minVectorScore
     );
 
-    // 阶段3: 标签精排
+    // 阶段3: 技能精确匹配精排 + 语义补充
     const candidates = filteredMatches.map(m => ({
       id: m.id,
       score: m.score,
-      metadata: m.metadata as UnifiedMetadata,
+      metadata: m.metadata as unknown as UnifiedMetadata,
     }));
 
-    const results = this.rerankByTags(candidates, jobData, jobData.requiredSkills, mergedConfig);
+    const results = this.rerankWithSemanticSupplement(
+      candidates,
+      jobData,
+      mergedConfig,
+      filterRelaxed,
+      relaxLevel
+    );
 
     // 返回 topK 结果
     return results.slice(0, mergedConfig.finalTopK);
   }
 
   /**
-   * 构建硬性过滤条件
+   * 带渐进放宽的向量搜索
    */
-  buildHardFilters(sourceData: UnifiedTags, targetType: 'resume' | 'job'): Record<string, unknown> {
-    const filters: Record<string, unknown> = {};
+  private async searchWithProgressiveRelax(
+    vector: number[],
+    indexType: PineconeIndexType,
+    initialFilters: PineconeFilter,
+    sourceData: UnifiedTags,
+    config: EnhancedMatchingConfig
+  ): Promise<{
+    success: boolean;
+    matches: Array<{ id: string; score: number; metadata: Record<string, unknown> }>;
+    relaxLevel: number;
+  }> {
+    let currentFilters = initialFilters;
+    let relaxLevel = 0;
 
-    if (targetType === 'job') {
-      // 简历找岗位：岗位要求的经验年限 <= 简历的经验年限
-      if (sourceData.experienceYears > 0) {
-        filters['experience_years'] = { $lte: sourceData.experienceYears };
+    while (relaxLevel <= config.maxRelaxLevel) {
+      const searchResult = await PineconeClient.search({
+        vector,
+        topK: config.vectorRecallTopK,
+        indexType,
+        filter: Object.keys(currentFilters).length > 0 ? currentFilters : undefined,
+        includeMetadata: true,
+      });
+
+      if (searchResult.success && searchResult.matches.length > 0) {
+        return {
+          success: true,
+          matches: searchResult.matches,
+          relaxLevel,
+        };
       }
 
-      // 岗位类型匹配
-      if (sourceData.jobType && sourceData.jobType !== 'other') {
-        filters['job_type'] = sourceData.jobType;
-      }
-    } else {
-      // 岗位找简历：简历的经验年限 >= 岗位要求
-      if (sourceData.experienceYears > 0) {
-        filters['experience_years'] = { $gte: sourceData.experienceYears };
-      }
-
-      // 岗位类型匹配
-      if (sourceData.jobType && sourceData.jobType !== 'other') {
-        filters['job_type'] = sourceData.jobType;
+      // 尝试放宽过滤条件
+      if (relaxLevel < config.maxRelaxLevel && config.relaxFilterOnEmpty) {
+        relaxLevel++;
+        currentFilters = structuredFilterBuilder.relaxFilters(
+          initialFilters,
+          sourceData,
+          relaxLevel
+        );
+        console.log(`🔄 [过滤放宽] 级别 ${relaxLevel}:`, JSON.stringify(currentFilters));
+      } else {
+        break;
       }
     }
 
-    return filters;
+    return {
+      success: false,
+      matches: [],
+      relaxLevel,
+    };
   }
 
   /**
-   * 放宽过滤条件
+   * 带语义补充的精排
    */
-  private relaxFilters(
-    originalFilters: Record<string, unknown>,
-    sourceData: UnifiedTags
-  ): Record<string, unknown> {
-    const relaxedFilters: Record<string, unknown> = {};
-
-    // 放宽经验年限要求（-1年）
-    if (originalFilters['experience_years']) {
-      const expFilter = originalFilters['experience_years'] as Record<string, number>;
-      if (expFilter.$lte !== undefined) {
-        // 简历找岗位：允许岗位要求比简历经验多1年
-        relaxedFilters['experience_years'] = { $lte: sourceData.experienceYears + 1 };
-      } else if (expFilter.$gte !== undefined) {
-        // 岗位找简历：允许简历经验比岗位要求少1年
-        const relaxedValue = Math.max(0, sourceData.experienceYears - 1);
-        relaxedFilters['experience_years'] = { $gte: relaxedValue };
-      }
-    }
-
-    // 移除岗位类型限制（完全放宽）
-    // 不再添加 job_type 过滤
-
-    return relaxedFilters;
-  }
-
-  /**
-   * 执行标签精排
-   */
-  rerankByTags(
+  private rerankWithSemanticSupplement(
     candidates: Array<{ id: string; score: number; metadata: UnifiedMetadata }>,
     sourceData: UnifiedTags,
-    requiredSkills: string[],
-    config: MatchingConfig
-  ): MatchingResult[] {
-    const results: MatchingResult[] = [];
+    config: EnhancedMatchingConfig,
+    filterRelaxed: boolean,
+    relaxLevel: number
+  ): EnhancedMatchingResult[] {
+    const results: EnhancedMatchingResult[] = [];
 
     for (const candidate of candidates) {
       const metadata = candidate.metadata;
 
-      // 使用 normalized_skills 进行技能匹配（这是标准化后的具体技能词）
-      const jobNormalizedSkills = metadata.normalized_skills || [];
+      // 获取岗位技能：优先使用 normalized_skills，如果没有则尝试从其他字段提取
+      let jobNormalizedSkills = metadata.normalized_skills || [];
 
-      // 调试日志：查看技能匹配情况
+      // 兼容旧版岗位数据：如果没有 normalized_skills，尝试从其他字段提取
+      if (jobNormalizedSkills.length === 0) {
+        // 优先使用解析后的技能（更准确）
+        const metadataAny = metadata as unknown as Record<string, unknown>;
+        const parsedRequiredSkills = (metadataAny.parsed_required_skills as string[]) || [];
+        const parsedPreferredSkills = (metadataAny.parsed_preferred_skills as string[]) || [];
+        const requiredSkills = metadata.required_skills || [];
+        const preferredSkills = metadata.preferred_skills || [];
+
+        // 合并所有技能来源，优先使用解析后的技能
+        const allSkills = [
+          ...parsedRequiredSkills,
+          ...parsedPreferredSkills,
+          ...requiredSkills,
+          ...preferredSkills,
+        ];
+
+        jobNormalizedSkills = [...new Set(allSkills)]; // 去重
+      }
+
+      // 调试日志
       console.log(`🔍 [精排] 岗位: ${metadata.title || metadata.id}`);
       console.log(`   岗位类型: ${metadata.job_type}, 简历目标: ${sourceData.jobType}`);
-      console.log(`   岗位技能: ${JSON.stringify(jobNormalizedSkills.slice(0, 8))}...`);
-      console.log(`   简历技能: ${JSON.stringify(sourceData.normalizedSkills.slice(0, 8))}...`);
+      console.log(
+        `   岗位技能: ${JSON.stringify(jobNormalizedSkills.slice(0, 8))}${jobNormalizedSkills.length > 8 ? '...' : ''}`
+      );
+      console.log(
+        `   简历技能: ${JSON.stringify(sourceData.normalizedSkills.slice(0, 8))}${sourceData.normalizedSkills.length > 8 ? '...' : ''}`
+      );
 
-      // 计算技能匹配度 - 使用 normalized_skills 进行匹配
-      const { skillMatchScore, matchedSkills, missingSkills } =
-        this.calculateSkillMatchByNormalizedSkills(
+      // 阶段3: 技能精确匹配
+      const exactMatchResult = skillMatcher.exactMatch(
+        sourceData.normalizedSkills,
+        jobNormalizedSkills
+      );
+
+      // 阶段4: 语义补充
+      let semanticResult = {
+        semanticBonus: 0,
+        semanticMatches: [] as Array<{ resumeSkill: string; jobSkill: string; similarity: number }>,
+      };
+      if (config.semanticSupplementEnabled) {
+        semanticResult = skillMatcher.semanticSupplement(
           sourceData.normalizedSkills,
-          jobNormalizedSkills
+          jobNormalizedSkills,
+          candidate.score
         );
+      }
 
-      // 计算岗位类型匹配度（传入标题用于推断）
+      // 计算岗位类型匹配度
       const jobTypeMatchScore = this.calculateJobTypeMatch(
         sourceData.jobType,
         metadata.job_type,
@@ -274,11 +315,16 @@ export class MatchingService implements IMatchingService {
       // 获取推断的岗位类型用于日志
       const inferredJobType = metadata.job_type || this.inferJobTypeFromTitle(metadata.title || '');
       console.log(
-        `   技能匹配分: ${skillMatchScore.toFixed(3)}, 岗位类型匹配分: ${jobTypeMatchScore.toFixed(3)} (推断: ${inferredJobType})`
+        `   技能匹配分: ${exactMatchResult.matchScore.toFixed(3)}, 岗位类型匹配分: ${jobTypeMatchScore.toFixed(3)} (推断: ${inferredJobType})`
       );
       console.log(
-        `   匹配技能: ${matchedSkills.length}个 [${matchedSkills.slice(0, 5).join(', ')}]`
+        `   匹配技能: ${exactMatchResult.matchedSkills.length}个 [${exactMatchResult.matchedSkills.slice(0, 5).join(', ')}]`
       );
+      if (semanticResult.semanticMatches.length > 0) {
+        console.log(
+          `   语义匹配: ${semanticResult.semanticMatches.length}个, 加分: ${semanticResult.semanticBonus.toFixed(3)}`
+        );
+      }
 
       // 计算经验匹配度
       const experienceMatchScore = this.calculateExperienceMatch(
@@ -290,32 +336,39 @@ export class MatchingService implements IMatchingService {
       // 计算薪资匹配度
       const salaryMatchScore = this.calculateSalaryMatch(sourceData, metadata);
 
-      // 计算综合得分（加入岗位类型匹配）
-      const finalScore =
-        skillMatchScore * config.weights.skillMatch +
+      // 阶段5: 计算综合得分
+      const baseScore =
+        exactMatchResult.matchScore * config.weights.skillMatch +
         jobTypeMatchScore * config.weights.jobTypeMatch +
         candidate.score * config.weights.vectorSimilarity +
         experienceMatchScore * config.weights.experienceMatch +
         salaryMatchScore * config.weights.salaryMatch;
 
+      // 加入语义补充加分（最多 0.05）
+      const finalScore = Math.min(baseScore + semanticResult.semanticBonus, 1.0);
+
       console.log(
         `   向量分: ${candidate.score.toFixed(3)}, 经验分: ${experienceMatchScore.toFixed(3)}, 薪资分: ${salaryMatchScore.toFixed(3)}`
       );
       console.log(
-        `   综合分: ${finalScore.toFixed(3)} = 技能(${(skillMatchScore * config.weights.skillMatch).toFixed(3)}) + 岗位类型(${(jobTypeMatchScore * config.weights.jobTypeMatch).toFixed(3)}) + 向量(${(candidate.score * config.weights.vectorSimilarity).toFixed(3)}) + 经验(${(experienceMatchScore * config.weights.experienceMatch).toFixed(3)}) + 薪资(${(salaryMatchScore * config.weights.salaryMatch).toFixed(3)})`
+        `   综合分: ${finalScore.toFixed(3)} = 技能(${(exactMatchResult.matchScore * config.weights.skillMatch).toFixed(3)}) + 岗位类型(${(jobTypeMatchScore * config.weights.jobTypeMatch).toFixed(3)}) + 向量(${(candidate.score * config.weights.vectorSimilarity).toFixed(3)}) + 经验(${(experienceMatchScore * config.weights.experienceMatch).toFixed(3)}) + 薪资(${(salaryMatchScore * config.weights.salaryMatch).toFixed(3)}) + 语义(${semanticResult.semanticBonus.toFixed(3)})`
       );
 
       results.push({
         id: candidate.id,
         score: finalScore,
         vectorScore: candidate.score,
-        skillMatchScore,
+        skillMatchScore: exactMatchResult.matchScore,
         experienceMatchScore,
         salaryMatchScore,
         jobTypeMatchScore,
-        matchedSkills,
-        missingSkills,
+        matchedSkills: exactMatchResult.matchedSkills,
+        missingSkills: exactMatchResult.missingSkills,
         metadata,
+        filterRelaxed,
+        relaxLevel,
+        semanticBonus: semanticResult.semanticBonus,
+        semanticMatches: semanticResult.semanticMatches,
       });
     }
 
@@ -326,40 +379,95 @@ export class MatchingService implements IMatchingService {
   }
 
   /**
+   * 构建硬性过滤条件（兼容旧接口）
+   */
+  buildHardFilters(sourceData: UnifiedTags, targetType: 'resume' | 'job'): Record<string, unknown> {
+    return structuredFilterBuilder.buildFilters(sourceData, targetType, FilterStrictness.STRICT);
+  }
+
+  /**
+   * 执行标签精排（兼容旧接口）
+   */
+  rerankByTags(
+    candidates: Array<{ id: string; score: number; metadata: UnifiedMetadata }>,
+    sourceData: UnifiedTags,
+    _requiredSkills: string[],
+    config: MatchingConfig
+  ): MatchingResult[] {
+    const results: MatchingResult[] = [];
+
+    for (const candidate of candidates) {
+      const metadata = candidate.metadata;
+      const jobNormalizedSkills = metadata.normalized_skills || [];
+
+      // 技能精确匹配
+      const exactMatchResult = skillMatcher.exactMatch(
+        sourceData.normalizedSkills,
+        jobNormalizedSkills
+      );
+
+      // 岗位类型匹配
+      const jobTypeMatchScore = this.calculateJobTypeMatch(
+        sourceData.jobType,
+        metadata.job_type,
+        metadata.title
+      );
+
+      // 经验匹配
+      const experienceMatchScore = this.calculateExperienceMatch(
+        sourceData.experienceYears,
+        metadata.experience_years || 0,
+        metadata.type
+      );
+
+      // 薪资匹配
+      const salaryMatchScore = this.calculateSalaryMatch(sourceData, metadata);
+
+      // 综合得分
+      const finalScore =
+        exactMatchResult.matchScore * config.weights.skillMatch +
+        jobTypeMatchScore * config.weights.jobTypeMatch +
+        candidate.score * config.weights.vectorSimilarity +
+        experienceMatchScore * config.weights.experienceMatch +
+        salaryMatchScore * config.weights.salaryMatch;
+
+      results.push({
+        id: candidate.id,
+        score: finalScore,
+        vectorScore: candidate.score,
+        skillMatchScore: exactMatchResult.matchScore,
+        experienceMatchScore,
+        salaryMatchScore,
+        jobTypeMatchScore,
+        matchedSkills: exactMatchResult.matchedSkills,
+        missingSkills: exactMatchResult.missingSkills,
+        metadata,
+      });
+    }
+
+    results.sort((a, b) => b.score - a.score);
+    return results;
+  }
+
+  /**
    * 计算岗位类型匹配度
-   * 相同类型得满分，相近类型得部分分，完全不同得低分
    */
   private calculateJobTypeMatch(
     resumeJobType: string,
     jobJobType: string | undefined,
     jobTitle?: string
   ): number {
-    // 如果岗位没有 job_type，根据标题推断
     const inferredJobType = jobJobType || this.inferJobTypeFromTitle(jobTitle || '');
 
-    // 如果完全匹配，得满分
     if (resumeJobType === inferredJobType) {
       return 1.0;
     }
 
-    // 定义岗位类型的相近关系
-    const relatedTypes: Record<string, string[]> = {
-      technical: ['research'], // 技术和研究相近
-      research: ['technical'], // 研究和技术相近
-      product: ['design', 'business'], // 产品和设计、商务有一定关联
-      design: ['product'], // 设计和产品相近
-      operation: ['marketing', 'business'], // 运营和市场、商务相近
-      marketing: ['operation', 'business'], // 市场和运营、商务相近
-      business: ['marketing', 'operation', 'product'], // 商务和多个类型相近
-    };
-
-    // 如果是相近类型，得部分分
-    const related = relatedTypes[resumeJobType] || [];
+    const related = RELATED_JOB_TYPES[resumeJobType] || [];
     if (related.includes(inferredJobType)) {
       return 0.5;
     }
 
-    // 完全不同的类型，得很低的分
     return 0.1;
   }
 
@@ -369,7 +477,6 @@ export class MatchingService implements IMatchingService {
   private inferJobTypeFromTitle(title: string): string {
     const lowerTitle = title.toLowerCase();
 
-    // 技术类关键词
     const technicalKeywords = [
       'engineer',
       'developer',
@@ -403,7 +510,6 @@ export class MatchingService implements IMatchingService {
       '技术负责人',
     ];
 
-    // 产品类关键词
     const productKeywords = [
       'product',
       'pm',
@@ -415,7 +521,6 @@ export class MatchingService implements IMatchingService {
       '产品负责人',
     ];
 
-    // 运营类关键词
     const operationKeywords = [
       'operation',
       'community',
@@ -428,7 +533,6 @@ export class MatchingService implements IMatchingService {
       '用户',
     ];
 
-    // 市场类关键词
     const marketingKeywords = [
       'marketing',
       'brand',
@@ -441,7 +545,6 @@ export class MatchingService implements IMatchingService {
       '媒体',
     ];
 
-    // 设计类关键词
     const designKeywords = [
       'design',
       'designer',
@@ -454,7 +557,6 @@ export class MatchingService implements IMatchingService {
       '视觉',
     ];
 
-    // 研究类关键词
     const researchKeywords = [
       'research',
       'researcher',
@@ -468,7 +570,6 @@ export class MatchingService implements IMatchingService {
       '数据科学',
     ];
 
-    // 商务类关键词
     const businessKeywords = [
       'business',
       'bd',
@@ -482,7 +583,6 @@ export class MatchingService implements IMatchingService {
       '合作',
     ];
 
-    // 按优先级检查
     if (technicalKeywords.some(k => lowerTitle.includes(k))) return 'technical';
     if (productKeywords.some(k => lowerTitle.includes(k))) return 'product';
     if (designKeywords.some(k => lowerTitle.includes(k))) return 'design';
@@ -492,104 +592,6 @@ export class MatchingService implements IMatchingService {
     if (businessKeywords.some(k => lowerTitle.includes(k))) return 'business';
 
     return 'other';
-  }
-
-  /**
-   * 计算技能匹配度（基于标准化技能列表）
-   * 使用简历技能与岗位技能的交集比例计算匹配度
-   */
-  private calculateSkillMatchByNormalizedSkills(
-    resumeSkills: string[],
-    jobSkills: string[]
-  ): {
-    skillMatchScore: number;
-    matchedSkills: string[];
-    missingSkills: string[];
-  } {
-    const matchedSkills: string[] = [];
-    const missingSkills: string[] = [];
-
-    if (jobSkills.length === 0) {
-      // 如果岗位没有技能要求，返回中等分数
-      return { skillMatchScore: 0.5, matchedSkills: [], missingSkills: [] };
-    }
-
-    // 标准化简历技能用于比较
-    const normalizedResumeSkills = new Set(
-      resumeSkills.map(s => skillNormalizer.normalize(s).normalized.toLowerCase())
-    );
-
-    // 检查岗位技能在简历中的匹配情况
-    for (const skill of jobSkills) {
-      const normalizedSkill = skillNormalizer.normalize(skill).normalized.toLowerCase();
-      if (normalizedResumeSkills.has(normalizedSkill)) {
-        matchedSkills.push(skill);
-      } else {
-        missingSkills.push(skill);
-      }
-    }
-
-    // 计算匹配度：匹配的技能数 / 岗位要求的技能数
-    // 这样技术岗位（要求更多技术技能）会对技术简历有更高的匹配度
-    const skillMatchScore = matchedSkills.length / jobSkills.length;
-
-    return { skillMatchScore, matchedSkills, missingSkills };
-  }
-
-  /**
-   * 计算技能匹配度
-   */
-  private calculateSkillMatch(
-    sourceSkills: string[],
-    targetSkills: string[],
-    requiredSkills: string[]
-  ): {
-    skillMatchScore: number;
-    matchedSkills: string[];
-    missingSkills: string[];
-  } {
-    const matchedSkills: string[] = [];
-    const missingSkills: string[] = [];
-
-    // 标准化所有技能用于比较
-    const normalizedSourceSkills = new Set(
-      sourceSkills.map(s => skillNormalizer.normalize(s).normalized.toLowerCase())
-    );
-
-    const normalizedTargetSkills = new Set(
-      targetSkills.map(s => skillNormalizer.normalize(s).normalized.toLowerCase())
-    );
-
-    // 如果有必须技能，计算必须技能的匹配度
-    if (requiredSkills.length > 0) {
-      for (const skill of requiredSkills) {
-        const normalizedSkill = skillNormalizer.normalize(skill).normalized.toLowerCase();
-        if (normalizedSourceSkills.has(normalizedSkill)) {
-          matchedSkills.push(skill);
-        } else {
-          missingSkills.push(skill);
-        }
-      }
-
-      const skillMatchScore =
-        requiredSkills.length > 0 ? matchedSkills.length / requiredSkills.length : 0;
-
-      return { skillMatchScore, matchedSkills, missingSkills };
-    }
-
-    // 如果没有必须技能，计算技能交集
-    for (const skill of sourceSkills) {
-      const normalizedSkill = skillNormalizer.normalize(skill).normalized.toLowerCase();
-      if (normalizedTargetSkills.has(normalizedSkill)) {
-        matchedSkills.push(skill);
-      }
-    }
-
-    // 计算 Jaccard 相似度
-    const union = new Set([...normalizedSourceSkills, ...normalizedTargetSkills]);
-    const skillMatchScore = union.size > 0 ? matchedSkills.length / union.size : 0;
-
-    return { skillMatchScore, matchedSkills, missingSkills };
   }
 
   /**
@@ -622,16 +624,15 @@ export class MatchingService implements IMatchingService {
   /**
    * 计算薪资匹配度
    */
-  private calculateSalaryMatch(sourceData: UnifiedTags, metadata: UnifiedMetadata): number {
-    // 如果没有薪资信息，返回中等分数
+  private calculateSalaryMatch(_sourceData: UnifiedTags, metadata: UnifiedMetadata): number {
     if (metadata.type === 'job') {
+      // 如果没有薪资信息，返回中等分数
       const jobSalaryMin = metadata.salary_min;
       const jobSalaryMax = metadata.salary_max;
 
       if (!jobSalaryMin && !jobSalaryMax) {
         return 0.5;
       }
-
       // 这里可以根据简历的期望薪资进行匹配
       // 暂时返回中等分数
       return 0.5;
@@ -642,7 +643,6 @@ export class MatchingService implements IMatchingService {
       if (!resumeSalaryMin && !resumeSalaryMax) {
         return 0.5;
       }
-
       // 这里可以根据岗位的薪资范围进行匹配
       // 暂时返回中等分数
       return 0.5;

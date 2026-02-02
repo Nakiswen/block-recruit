@@ -186,10 +186,11 @@ describe('Matching Service', () => {
       minVectorScore: 0.6,
       relaxFilterOnEmpty: true,
       weights: {
-        skillMatch: 0.4,
-        vectorSimilarity: 0.25,
-        experienceMatch: 0.2,
-        salaryMatch: 0.15,
+        skillMatch: 0.35,
+        jobTypeMatch: 0.2,
+        vectorSimilarity: 0.2,
+        experienceMatch: 0.15,
+        salaryMatch: 0.1,
       },
     };
 
@@ -253,7 +254,7 @@ describe('Matching Service', () => {
           metadata: {
             id: 'job_1',
             type: 'job' as const,
-            normalized_skills: ['react', 'typescript', 'nodejs'],
+            normalized_skills: ['react', 'typescript'], // 只包含简历匹配的技能
             skill_categories: ['frontend', 'backend'],
             experience_years: 3,
             education_level: '本科',
@@ -284,7 +285,7 @@ describe('Matching Service', () => {
       );
 
       expect(result.length).toBe(1);
-      expect(result[0].skillMatchScore).toBe(1); // 2/2 必须技能都匹配
+      expect(result[0].skillMatchScore).toBe(1); // 2/2 normalized_skills 都匹配
       expect(result[0].matchedSkills).toContain('react');
       expect(result[0].matchedSkills).toContain('typescript');
     });

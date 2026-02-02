@@ -713,6 +713,37 @@ export class SkillNormalizer implements ISkillNormalizer {
 
     return counts[0].type;
   }
+
+  /**
+   * 获取技能所属的语义组
+   * 注意：语义组功能主要在 skillMatcher.ts 中实现
+   * 这里提供基于分类的简化版本
+   */
+  getSemanticGroup(skill: string): SkillCategory {
+    return this.getCategory(skill);
+  }
+
+  /**
+   * 判断两个技能是否语义相似
+   * 基于技能分类判断：同一分类的技能被认为是语义相似的
+   */
+  areSemanticallySimilar(skill1: string, skill2: string): boolean {
+    // 首先检查是否等价（同义词）
+    if (this.areEquivalent(skill1, skill2)) {
+      return true;
+    }
+
+    // 检查是否属于同一分类
+    const category1 = this.getCategory(skill1);
+    const category2 = this.getCategory(skill2);
+
+    // 如果都是 OTHER 分类，不认为是语义相似
+    if (category1 === SkillCategory.OTHER || category2 === SkillCategory.OTHER) {
+      return false;
+    }
+
+    return category1 === category2;
+  }
 }
 
 // 导出单例实例

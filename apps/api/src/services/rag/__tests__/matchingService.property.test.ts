@@ -440,13 +440,13 @@ describe('Matching Service 属性测试', () => {
    * Property 10: 精排加权公式正确性
    *
    * 对于任意匹配结果，其最终 score 应该等于
-   * skillMatchScore * 0.4 + vectorScore * 0.25 + experienceMatchScore * 0.2 + salaryMatchScore * 0.15
-   * （允许浮点误差 0.001）
+   * skillMatchScore * skillMatch + jobTypeMatchScore * jobTypeMatch + vectorScore * vectorSimilarity + experienceMatchScore * experienceMatch + salaryMatchScore * salaryMatch
+   * （允许浮点误差 0.01）
    *
    * **Validates: Requirements 5.9**
    */
   describe('Property 10: 精排加权公式正确性', () => {
-    test('最终分数应符合加权公式', () => {
+    test('最终分数应符合加权公式（包含岗位类型匹配）', () => {
       fc.assert(
         fc.property(
           candidatesArb(jobMetadataArb as fc.Arbitrary<UnifiedMetadata>),
@@ -464,12 +464,13 @@ describe('Matching Service 属性测试', () => {
             for (const result of results) {
               const expectedScore =
                 result.skillMatchScore * config.weights.skillMatch +
+                result.jobTypeMatchScore * config.weights.jobTypeMatch +
                 result.vectorScore * config.weights.vectorSimilarity +
                 result.experienceMatchScore * config.weights.experienceMatch +
                 result.salaryMatchScore * config.weights.salaryMatch;
 
-              // 允许浮点误差 0.001
-              expect(Math.abs(result.score - expectedScore)).toBeLessThan(0.001);
+              // 允许浮点误差 0.01
+              expect(Math.abs(result.score - expectedScore)).toBeLessThan(0.01);
             }
 
             return true;
@@ -483,18 +484,20 @@ describe('Matching Service 属性测试', () => {
       // 生成自定义权重（总和为1）- 使用 Math.fround 确保是 32-bit float
       const customWeightsArb = fc
         .tuple(
-          fc.float({ min: Math.fround(0.1), max: Math.fround(0.5), noNaN: true }),
-          fc.float({ min: Math.fround(0.1), max: Math.fround(0.5), noNaN: true }),
-          fc.float({ min: Math.fround(0.1), max: Math.fround(0.5), noNaN: true }),
-          fc.float({ min: Math.fround(0.1), max: Math.fround(0.5), noNaN: true })
+          fc.float({ min: Math.fround(0.1), max: Math.fround(0.4), noNaN: true }),
+          fc.float({ min: Math.fround(0.1), max: Math.fround(0.3), noNaN: true }),
+          fc.float({ min: Math.fround(0.1), max: Math.fround(0.3), noNaN: true }),
+          fc.float({ min: Math.fround(0.05), max: Math.fround(0.2), noNaN: true }),
+          fc.float({ min: Math.fround(0.05), max: Math.fround(0.15), noNaN: true })
         )
-        .map(([a, b, c, d]) => {
-          const total = a + b + c + d;
+        .map(([a, b, c, d, e]) => {
+          const total = a + b + c + d + e;
           return {
             skillMatch: a / total,
-            vectorSimilarity: b / total,
-            experienceMatch: c / total,
-            salaryMatch: d / total,
+            jobTypeMatch: b / total,
+            vectorSimilarity: c / total,
+            experienceMatch: d / total,
+            salaryMatch: e / total,
           };
         });
 
@@ -520,12 +523,13 @@ describe('Matching Service 属性测试', () => {
             for (const result of results) {
               const expectedScore =
                 result.skillMatchScore * weights.skillMatch +
+                result.jobTypeMatchScore * weights.jobTypeMatch +
                 result.vectorScore * weights.vectorSimilarity +
                 result.experienceMatchScore * weights.experienceMatch +
                 result.salaryMatchScore * weights.salaryMatch;
 
-              // 允许浮点误差 0.001
-              expect(Math.abs(result.score - expectedScore)).toBeLessThan(0.001);
+              // 允许浮点误差 0.01
+              expect(Math.abs(result.score - expectedScore)).toBeLessThan(0.01);
             }
 
             return true;

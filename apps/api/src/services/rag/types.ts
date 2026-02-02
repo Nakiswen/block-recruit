@@ -270,10 +270,11 @@ export interface MatchingResult {
  * 默认匹配配置
  * 权重分配说明：
  * - skillMatch (0.35): 技能匹配最重要
- * - jobTypeMatch (0.25): 岗位类型匹配很重要，开发不应该匹配产品岗
+ * - jobTypeMatch (0.20): 岗位类型匹配很重要，开发不应该匹配产品岗
  * - vectorSimilarity (0.20): 语义相似度
- * - experienceMatch (0.12): 经验匹配
- * - salaryMatch (0.08): 薪资匹配权重较低
+ * - experienceMatch (0.15): 经验匹配
+ * - salaryMatch (0.05): 薪资匹配权重较低
+ * - semanticBonus (0.05): 语义补充加分
  */
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
   hardFilterEnabled: true,
@@ -283,9 +284,47 @@ export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
   relaxFilterOnEmpty: true,
   weights: {
     skillMatch: 0.35,
-    jobTypeMatch: 0.25,
+    jobTypeMatch: 0.2,
     vectorSimilarity: 0.2,
-    experienceMatch: 0.12,
-    salaryMatch: 0.08,
+    experienceMatch: 0.15,
+    salaryMatch: 0.05,
   },
+};
+
+// ========== 增强匹配类型定义 ==========
+
+/**
+ * 增强匹配配置
+ */
+export interface EnhancedMatchingConfig extends MatchingConfig {
+  structuredFilterEnabled: boolean; // 是否启用结构化过滤
+  semanticSupplementEnabled: boolean; // 是否启用语义补充
+  maxRelaxLevel: number; // 最大放宽级别
+  semanticThreshold: number; // 语义补充阈值
+}
+
+/**
+ * 增强匹配结果
+ */
+export interface EnhancedMatchingResult extends MatchingResult {
+  filterRelaxed: boolean; // 是否使用了放宽的过滤
+  relaxLevel: number; // 放宽级别
+  semanticBonus: number; // 语义补充加分
+  semanticMatches: Array<{
+    // 语义匹配详情
+    resumeSkill: string;
+    jobSkill: string;
+    similarity: number;
+  }>;
+}
+
+/**
+ * 默认增强匹配配置
+ */
+export const DEFAULT_ENHANCED_MATCHING_CONFIG: EnhancedMatchingConfig = {
+  ...DEFAULT_MATCHING_CONFIG,
+  structuredFilterEnabled: true,
+  semanticSupplementEnabled: true,
+  maxRelaxLevel: 4,
+  semanticThreshold: 0.7,
 };
