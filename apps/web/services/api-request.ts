@@ -4,15 +4,11 @@
  */
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
-// 确定是否使用代理
-const shouldUseProxy = process.env.NODE_ENV === 'development';
+import { getApiBaseUrl } from '../lib/api-url';
 
 // 创建axios实例，配置基础URL
 const instance: AxiosInstance = axios.create({
-  // 如果是开发环境，使用代理路径；否则使用环境变量中的API URL
-  baseURL: shouldUseProxy
-    ? '' // 空字符串，因为我们会在Next.js配置中处理代理
-    : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
+  baseURL: getApiBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -47,14 +43,6 @@ instance.interceptors.request.use(
         }
       } catch (error) {
         console.warn('Failed to get session:', error);
-      }
-    }
-
-    // 修改API请求路径，确保正确处理
-    if (shouldUseProxy && config.url) {
-      // 确保URL以/api/business开头 (排除 NextAuth 路由)
-      if (!config.url.startsWith('/api') && !config.url.startsWith('http')) {
-        config.url = `/api/business${config.url.startsWith('/') ? '' : '/'}${config.url}`;
       }
     }
 

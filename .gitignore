@@ -42,20 +42,18 @@ Thumbs.db
 *.log
 *.tmp
 .cache/
+tmp/
 
 # Package manager
 yarn.lock
 package-lock.json
-pnpm-lock.yaml
 
 # Local development
 .turbo
 .vercel
 
-/docs/
-
-# prisma build
-apps/api/src/prisma/
+# Generated Prisma clients
+apps/api/generated/prisma/
 
 .claude/
 .cursorrules

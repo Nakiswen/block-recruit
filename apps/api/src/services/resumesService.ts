@@ -144,16 +144,13 @@ export async function vectorizeResume(resumeId: string): Promise<Resume> {
     };
 
     // 向量化存储
-    const resumeVector = await ragService.vectorizeAndStoreResume(
-      resumeForRAG as unknown as Resume
-    );
+    await ragService.vectorizeAndStoreResume(resumeForRAG as any);
 
     // 获取向量ID
     const vectorId = `resume_${resumeId}`;
 
     // 更新简历的向量ID
-    await resumesModel.updateResumeVectorId(resumeId, vectorId);
-    return resumeVector as unknown as Resume;
+    return await resumesModel.updateResumeVectorId(resumeId, vectorId);
   } catch (error) {
     // 检查是否是Pinecone初始化错误
     if (

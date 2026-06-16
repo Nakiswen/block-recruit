@@ -21,7 +21,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "jotai": ["./node_modules/jotai"],
+      "jotai/*": ["./node_modules/jotai/*"]
     },
     "baseUrl": "."
   },
@@ -33,4 +35,4 @@
     "lib/api-config.js"
   ],
   "exclude": ["node_modules", "scripts"]
-} 
+}

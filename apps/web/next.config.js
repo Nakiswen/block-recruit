@@ -1,5 +1,5 @@
-/** @type {import('next').NextConfig} */
 const path = require('path');
+const webpack = require('webpack');
 
 // 配置 undici (fetch API) 使用代理
 // NextAuth v5 使用 fetch，需要特殊配置
@@ -10,47 +10,28 @@ if (process.env.GLOBAL_AGENT_HTTP_PROXY) {
   setGlobalDispatcher(proxyAgent);
 }
 
-const webpack = require('webpack');
+const apiProxyTarget =
+  process.env.API_PROXY_TARGET ||
+  (process.env.NODE_ENV === 'development' ? 'http://localhost:3001' : undefined);
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['ui', 'web3-utils'],
   images: {
     domains: ['images.unsplash.com', 'app.uniswap.org'],
   },
-  // 确保服务器端可以访问环境变量
-  serverRuntimeConfig: {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-  },
-  env: {
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    NEXT_PUBLIC_OPENAI_API_KEY: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    UPSTASH_VECTOR_REST_URL: process.env.UPSTASH_VECTOR_REST_URL,
-    UPSTASH_VECTOR_REST_TOKEN: process.env.UPSTASH_VECTOR_REST_TOKEN,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    DATABASE_URL: process.env.DATABASE_URL,
-    // NextAuth v5 配置
-    AUTH_SECRET: process.env.AUTH_SECRET,
-    AUTH_URL: process.env.AUTH_URL,
-    AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
-    AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
-    // NextAuth 兼容性配置（v4 格式）
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    // 添加API URL配置，用于客户端直接访问
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
-  },
   // 添加API代理配置，解决本地开发环境的跨域问题
   async rewrites() {
-    console.log('设置API代理: /api/business/* => http://localhost:3001/*');
+    if (!apiProxyTarget) {
+      return [];
+    }
+
+    console.log(`设置API代理: /api/business/* => ${apiProxyTarget}/*`);
     return [
       {
         source: '/api/business/:path*',
-        destination: 'http://localhost:3001/:path*', // 代理到后端API服务 (排除 NextAuth 路由)
+        destination: `${apiProxyTarget}/:path*`, // 代理到后端API服务 (排除 NextAuth 路由)
       },
     ];
   },

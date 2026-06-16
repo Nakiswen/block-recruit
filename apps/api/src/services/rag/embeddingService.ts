@@ -298,8 +298,8 @@ dotenv.config();
 // 从环境变量获取配置
 const config: EmbeddingServiceConfig = {
   apiKey: process.env.EMBEDDING_API_KEY || process.env.AI_API_KEY || '',
-  embeddingApiUrl: 'https://api.siliconflow.cn/v1/embeddings',
-  modelName: 'BAAI/bge-m3',
+  embeddingApiUrl: process.env.EMBEDDING_API_URL || 'https://api.siliconflow.cn/v1/embeddings',
+  modelName: process.env.EMBEDDING_MODEL || 'BAAI/bge-m3',
   dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1024', 10), // BAAI/bge-m3模型默认维度
 };
 

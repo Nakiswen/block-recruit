@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
@@ -52,7 +53,7 @@ async function extractTextFromFile(file: File): Promise<string> {
 
           // 备用方法：将PDF内容保存为临时文件，然后直接读取内容
           // 注意：这种方法只能提取简单的文本内容
-          const tempDir = path.join(process.cwd(), 'temp');
+          const tempDir = path.join(os.tmpdir(), 'block-recruit');
           if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
           }

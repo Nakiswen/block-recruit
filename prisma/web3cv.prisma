@@ -3,13 +3,14 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../apps/api/src/prisma/web3cv"
-  binaryTargets = ["native", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
+  output   = "../apps/api/generated/prisma/web3cv"
+  binaryTargets = ["native"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("WEB3CV_DATABASE_URL")
+  directUrl = env("WEB3CV_DIRECT_URL")
 }
 
 /// 用户表，记录所有注册用户的钱包地址及基础信息（支持钱包登录和Google OAuth登录）
@@ -99,4 +100,4 @@ model NFTProof {
   tokenId   String   // 链上TokenId
   txHash    String   // 链上交易哈希
   mintedAt  DateTime // 铸造时间
-} 
+}

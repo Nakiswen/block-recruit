@@ -8,7 +8,7 @@ import type { job_posting } from '@/prisma/web3jobs';
  */
 export async function getJobById(topicId: string | number): Promise<job_posting | null> {
   const job = await prisma.job_posting.findUnique({
-    where: { topic_id: topicId },
+    where: { topic_id: String(topicId) },
   });
   return job;
 }

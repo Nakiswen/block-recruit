@@ -157,7 +157,6 @@ class LangChainAIService implements AIService {
     // 设置环境变量以确保 OpenAI SDK 使用正确的 baseURL
     process.env.OPENAI_BASE_URL = config.baseUrl || 'https://openrouter.ai/api/v1';
 
-    console.log('🚀 ~ LangChainAIService ~ constructor ~ config.apiKey:', config.apiKey);
     console.log(
       "🚀 ~ LangChainAIService ~ constructor ~ config.baseUrl || 'https://openrouter.ai/api/v1':",
       config.baseUrl || 'https://openrouter.ai/api/v1'
@@ -936,5 +935,20 @@ const config: AIServiceConfig = {
   baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1',
 };
 
-// 导出AI服务实例
-export const aiService = new LangChainAIService(config);
+let aiServiceInstance: LangChainAIService | null = null;
+
+function getAIService(): LangChainAIService {
+  if (!aiServiceInstance) {
+    aiServiceInstance = new LangChainAIService(config);
+  }
+  return aiServiceInstance;
+}
+
+// 导出懒加载代理，避免缺少 AI key 时影响非 AI 接口和健康检查。
+export const aiService: AIService = new Proxy({} as AIService, {
+  get(_target, prop, receiver) {
+    const service = getAIService();
+    const value = Reflect.get(service, prop, receiver);
+    return typeof value === 'function' ? value.bind(service) : value;
+  },
+});
