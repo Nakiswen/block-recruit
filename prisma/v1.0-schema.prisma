@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // 岗位模型
@@ -39,4 +40,4 @@ model ResumeAnalysis {
   recommended     Boolean  // 是否推荐
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-} 
+}

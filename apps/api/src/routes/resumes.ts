@@ -4,6 +4,8 @@ import { jwtAuth } from '../middleware/jwt';
 import * as resumesController from '@/controllers/resumesController';
 
 const router = new Router({ prefix: '/resumes' });
+const defaultUploadLimit = process.env.VERCEL ? 4 * 1024 * 1024 : 10 * 1024 * 1024;
+const maxUploadBytes = Number(process.env.MAX_UPLOAD_BYTES || defaultUploadLimit);
 
 // 配置 Multer 用于文件上传
 const upload = multer({
@@ -24,7 +26,7 @@ const upload = multer({
       cb(new Error('不支持的文件类型'), false);
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 文件大小限制
+  limits: { fileSize: maxUploadBytes },
 });
 
 /**
@@ -147,4 +149,4 @@ router.get('/:resumeId/matching-jobs', jwtAuth, resumesController.getMatchingJob
  */
 router.get('/:resumeId/progress', jwtAuth, resumesController.getResumeProgress);
 
-export default router; 
+export default router;

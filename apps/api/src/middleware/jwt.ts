@@ -2,8 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Context, Next } from 'koa';
 import { findUserByAddress } from '../models/usersModel.js';
 import prisma from '@/prisma/web3cv-prisma.js';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'default_secret';
+import { getJwtSecret } from '@/config/auth.js';
 
 // 定义JWT载荷类型
 interface JwtPayload {
@@ -37,7 +36,7 @@ export async function jwtAuth(ctx: Context, next: Next) {
   try {
     // 尝试作为JWT token验证(钱包登录)
     try {
-      const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;
 
       // 如果是有效的JWT token，按原逻辑处理
       if (payload.address) {

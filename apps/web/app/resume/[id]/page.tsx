@@ -3,6 +3,8 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { buildApiUrl } from '@/lib/api-url';
+
 interface ResumeAnalysis {
   job: {
     title: string;
@@ -26,7 +28,7 @@ export default function ResumeAnalysisPage() {
   useEffect(() => {
     const fetchAnalysis = async () => {
       try {
-        const response = await fetch(`/api/business/resume/${id}`);
+        const response = await fetch(buildApiUrl(`/resume/${id}`));
         const { data } = await response.json();
         setAnalysis(data);
       } catch (error) {

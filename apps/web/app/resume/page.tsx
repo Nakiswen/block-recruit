@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 
+import { buildApiUrl } from '@/lib/api-url';
+
 export default function ResumePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -23,7 +25,7 @@ export default function ResumePage() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/business/job');
+      const response = await fetch(buildApiUrl('/job'));
       const { success, data, error } = await response.json();
 
       if (!success) {
@@ -64,7 +66,7 @@ export default function ResumePage() {
         },
       };
 
-      const response = await fetch('/api/business/job', {
+      const response = await fetch(buildApiUrl('/job'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +146,7 @@ export default function ResumePage() {
       // 使用 email 作为认证 token
       const tokenToSend = session?.user?.email || session?.user?.id;
 
-      const response = await fetch('/api/business/resume/analyze', {
+      const response = await fetch(buildApiUrl('/resume/analyze'), {
         method: 'POST',
         headers: {
           // 添加 Google OAuth token (使用 email)

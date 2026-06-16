@@ -1,0 +1,6 @@
+node_modules
+apps/api/dist
+apps/api/generated
+apps/web/.next
+tmp
+*.log

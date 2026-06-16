@@ -1,0 +1,18 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm run vercel-build",
+  "outputDirectory": ".",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 60,
+      "includeFiles": "{dist,generated}/**/*",
+      "excludeFiles": "{node_modules/.pnpm/canvas@*/**,node_modules/canvas/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api?path=$1"
+    }
+  ]
+}

@@ -1,29 +1,26 @@
-import Koa from 'koa';
-import bodyParser from 'koa-bodyparser';
-import Router from 'koa-router';
-import serverless from 'serverless-http';
+import type { IncomingMessage, ServerResponse } from 'http';
 
-import authRouter from './routes/auth';
-import jobsRouter from './routes/jobs';
-import resumesRouter from './routes/resumes';
-import usersRouter from './routes/users';
-// 其他路由按需引入
+import { createApp } from './app';
 
-const app = new Koa();
-const router = new Router();
+const app = createApp();
+const callback = app.callback();
 
-router.get('/health', async ctx => {
-  ctx.body = { status: 'ok', message: 'API服务运行正常' };
-});
+function normalizeRewriteUrl(req: IncomingMessage) {
+  if (!req.url) return;
 
-// 挂载所有路由
-app.use(bodyParser());
-app.use(router.routes()).use(router.allowedMethods());
-app.use(authRouter.routes()).use(authRouter.allowedMethods());
-app.use(usersRouter.routes()).use(usersRouter.allowedMethods());
-app.use(jobsRouter.routes()).use(jobsRouter.allowedMethods());
-app.use(resumesRouter.routes()).use(resumesRouter.allowedMethods());
-// 其他路由同理
+  const url = new URL(req.url, 'http://vercel.local');
+  const rewritePath = url.searchParams.get('path');
+  if (!rewritePath) return;
 
-// 导出 serverless handler
-export const handler = serverless(app);
+  url.searchParams.delete('path');
+  const normalizedPath = `/${rewritePath.replace(/^\/+/, '')}`;
+  const query = url.searchParams.toString();
+  req.url = query ? `${normalizedPath}?${query}` : normalizedPath;
+}
+
+export function handler(req: IncomingMessage, res: ServerResponse) {
+  normalizeRewriteUrl(req);
+  return callback(req, res);
+}
+
+export default handler;

@@ -32,6 +32,10 @@ pnpm dev
 pnpm build
 ```
 
+## 部署
+
+Vercel + Neon/Supabase 的部署方式见 [docs/deployment-vercel-neon-supabase.md](docs/deployment-vercel-neon-supabase.md)。
+
 ## 项目结构
 
 - `apps/web` - Web应用前端

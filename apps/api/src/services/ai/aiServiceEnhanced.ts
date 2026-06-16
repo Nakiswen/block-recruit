@@ -462,5 +462,20 @@ const config: AIServiceConfig = {
   baseUrl: process.env.AI_API_BASE_URL || 'https://openrouter.ai/api/v1',
 };
 
-// 导出增强版 AI 服务实例
-export const aiServiceEnhanced = new AIServiceEnhanced(config);
+let aiServiceEnhancedInstance: AIServiceEnhanced | null = null;
+
+function getAIServiceEnhanced(): AIServiceEnhanced {
+  if (!aiServiceEnhancedInstance) {
+    aiServiceEnhancedInstance = new AIServiceEnhanced(config);
+  }
+  return aiServiceEnhancedInstance;
+}
+
+// 导出懒加载代理，避免缺少 AI key 时影响非 AI 接口和健康检查。
+export const aiServiceEnhanced: AIServiceEnhanced = new Proxy({} as AIServiceEnhanced, {
+  get(_target, prop, receiver) {
+    const service = getAIServiceEnhanced();
+    const value = Reflect.get(service, prop, receiver);
+    return typeof value === 'function' ? value.bind(service) : value;
+  },
+});

@@ -1,12 +1,13 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../apps/api/src/prisma/web3jobs"
-  binaryTargets = ["native", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
+  output   = "../apps/api/generated/prisma/web3jobs"
+  binaryTargets = ["native"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("WEB3JOBS_DATABASE_URL")
+  directUrl = env("WEB3JOBS_DIRECT_URL")
 }
 
 /// 职位发布表 - 存储从其他招聘网站爬取的职位信息

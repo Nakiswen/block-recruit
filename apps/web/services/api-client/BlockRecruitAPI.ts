@@ -17,7 +17,7 @@ export class BlockRecruitAPI {
     HttpRequest: HttpRequestConstructor = AxiosHttpRequest
   ) {
     this.request = new HttpRequest({
-      BASE: config?.BASE ?? 'http://localhost:3001',
+      BASE: config?.BASE ?? process.env.NEXT_PUBLIC_API_URL ?? '',
       VERSION: config?.VERSION ?? '1.0.0',
       WITH_CREDENTIALS: config?.WITH_CREDENTIALS ?? false,
       CREDENTIALS: config?.CREDENTIALS ?? 'include',
